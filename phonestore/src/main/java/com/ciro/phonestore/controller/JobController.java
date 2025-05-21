@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@CrossOrigin("https://mobilephoneshop.vercel.app/")
+@CrossOrigin("http://localhost:5173")
 public class JobController {
 
     @Autowired
