@@ -38,8 +38,15 @@ public class JWTAuthFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         try {
-            final String authHeader = request.getHeader("Authorization");
             String path = request.getRequestURI();
+
+            // Skip JWT check for public endpoints
+            if (shouldNotFilter(request)) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            final String authHeader = request.getHeader("Authorization");
             logger.debug("Processing request to {}: {} with auth header: {}",
                     request.getMethod(), path,
                     authHeader != null ? "present" : "absent");
@@ -126,6 +133,10 @@ public class JWTAuthFilter extends OncePerRequestFilter {
                 path.startsWith("/api/firmware/brands") ||
                 path.startsWith("/api/firmware/models/") ||
                 path.equals("/error") ||
+                path.startsWith("/actuator/") ||
+                path.startsWith("/v3/api-docs/") ||
+                path.startsWith("/swagger-ui/") ||
+                path.equals("/swagger-ui.html") ||
                 "OPTIONS".equalsIgnoreCase(request.getMethod());
 
         if (shouldNotFilter) {
@@ -138,10 +149,29 @@ public class JWTAuthFilter extends OncePerRequestFilter {
     }
 
     private boolean isProtectedEndpoint(String path) {
-        return path.startsWith("/api/jobs/") &&
-                !path.startsWith("/api/jobs/status/") &&
-                !path.startsWith("/api/jobs/track/") &&
-                !path.startsWith("/api/jobs/public/") ||
+        // First check if it's a public endpoint
+        if (path.startsWith("/auth/") ||
+                path.startsWith("/public/") ||
+                path.startsWith("/api/products/list") ||
+                path.startsWith("/api/products/get/") ||
+                path.startsWith("/api/jobs/status/") ||
+                path.startsWith("/api/jobs/track/") ||
+                path.startsWith("/api/jobs/public/") ||
+                path.startsWith("/images/") ||
+                path.startsWith("/api/faqs/published") ||
+                path.startsWith("/api/firmware/view/") ||
+                path.startsWith("/api/firmware/brands") ||
+                path.startsWith("/api/firmware/models/") ||
+                path.equals("/error") ||
+                path.startsWith("/actuator/") ||
+                path.startsWith("/v3/api-docs/") ||
+                path.startsWith("/swagger-ui/") ||
+                path.equals("/swagger-ui.html")) {
+            return false;
+        }
+
+        // Then check if it's a protected endpoint
+        return path.startsWith("/api/jobs/") ||
                 path.startsWith("/admin/") ||
                 path.startsWith("/dashboard/") ||
                 path.startsWith("/api/admin/");

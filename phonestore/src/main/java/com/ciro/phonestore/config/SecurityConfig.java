@@ -53,10 +53,9 @@ public class SecurityConfig {
                     .authorizeHttpRequests(request -> {
                         logger.debug("Configuring authorization rules...");
                         request
+                                // Public endpoints
                                 .requestMatchers(
                                         "/auth/**",
-                                        "/auth/login",
-                                        "/auth/register",
                                         "/public/**",
                                         "/api/products/list",
                                         "/api/products/get/**",
@@ -70,45 +69,38 @@ public class SecurityConfig {
                                         "/api/firmware/models/**",
                                         "/error",
                                         "/actuator/**",
-                                        "/actuator/health/**",
                                         "/v3/api-docs/**",
                                         "/swagger-ui/**",
                                         "/swagger-ui.html")
                                 .permitAll()
+                                // Admin endpoints
                                 .requestMatchers(
                                         "/admin/**",
-                                        "/admin/register",
-                                        "/admin/get-all-users",
-                                        "/admin/get-users/**",
-                                        "/admin/update/**",
-                                        "/admin/delete/**",
-                                        "/api/products",
                                         "/api/products/update/**",
                                         "/api/products/delete/**",
-                                        "/api/jobs", // Admin job listing
-                                        "/api/jobs/{id}", // Admin job details
-                                        "/api/jobs/create/**", // Admin job creation
-                                        "/api/jobs/update/**", // Admin job updates
-                                        "/api/jobs/delete/**", // Admin job deletion
-                                        "/api/jobs/manage/**", // Admin job management
+                                        "/api/jobs",
+                                        "/api/jobs/{id}",
+                                        "/api/jobs/create/**",
+                                        "/api/jobs/update/**",
+                                        "/api/jobs/delete/**",
+                                        "/api/jobs/manage/**",
                                         "/api/firmware/upload",
                                         "/api/firmware/delete/**",
                                         "/api/firmware/update/**",
                                         "/api/faqs/**",
-                                        "/dashboard/**", // Admin dashboard endpoints
-                                        "/api/admin/**") // Admin API endpoints
+                                        "/dashboard/**",
+                                        "/api/admin/**")
                                 .hasAuthority("ADMIN")
+                                // User endpoints
                                 .requestMatchers(
-                                        "/api/jobs/create", // Authenticated users can create jobs
-                                        "/api/jobs/my/**", // Users can view their own jobs
-                                        "/api/jobs/user/**", // User's job endpoints
+                                        "/api/jobs/create",
+                                        "/api/jobs/my/**",
+                                        "/api/jobs/user/**",
                                         "/user/**",
-                                        "/api/user/**") // User-specific endpoints
-                                .hasAnyAuthority("USER", "ADMIN")
-                                .requestMatchers(
-                                        "/adminuser/get-profile",
+                                        "/api/user/**",
                                         "/adminuser/**")
-                                .hasAnyAuthority("ADMIN", "USER")
+                                .hasAnyAuthority("USER", "ADMIN")
+                                // Everything else requires authentication
                                 .anyRequest()
                                 .authenticated();
                     })
