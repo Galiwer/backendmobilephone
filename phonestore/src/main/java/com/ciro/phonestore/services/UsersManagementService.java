@@ -55,45 +55,58 @@ public class UsersManagementService {
     public ReqRes login(ReqRes loginRequest) {
         ReqRes response = new ReqRes();
         try {
-            logger.info("Login attempt for email: {}", loginRequest.getEmail());
+            logger.info("Login attempt starting for email: {}", loginRequest.getEmail());
+
+            // Log the received data (excluding password)
+            logger.debug("Received login request data - Email: {}", loginRequest.getEmail());
 
             if (loginRequest.getEmail() == null || loginRequest.getPassword() == null) {
-                logger.error("Login attempt with null email or password");
+                logger.error("Login attempt failed: Email or password is null");
                 response.setStatusCode(400);
                 response.setMessage("Email and password are required");
                 return response;
             }
 
             // First check if user exists
+            logger.debug("Checking if user exists in database");
             var userOptional = usersRepo.findByEmail(loginRequest.getEmail());
             if (userOptional.isEmpty()) {
-                logger.warn("User not found with email: {}", loginRequest.getEmail());
+                logger.warn("Login failed: User not found with email: {}", loginRequest.getEmail());
                 response.setStatusCode(401);
                 response.setMessage("Invalid email or password");
                 return response;
             }
 
             var user = userOptional.get();
-            logger.info("User found with role: {}", user.getRole());
+            logger.info("User found in database - Email: {}, Role: {}", user.getEmail(), user.getRole());
 
             try {
+                // Log the authentication attempt
+                logger.debug("Attempting to authenticate user with provided credentials");
+
+                // Create authentication token
+                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                        loginRequest.getEmail(),
+                        loginRequest.getPassword());
+
                 // Attempt authentication
-                logger.debug("Attempting authentication with provided credentials");
-                authenticationManager.authenticate(
-                        new UsernamePasswordAuthenticationToken(
-                                loginRequest.getEmail(),
-                                loginRequest.getPassword()));
+                var authentication = authenticationManager.authenticate(authToken);
+
+                logger.info("Authentication successful for user: {}", authentication.getName());
             } catch (Exception e) {
-                logger.error("Authentication failed for user: {}. Error: {}", loginRequest.getEmail(), e.getMessage());
+                logger.error("Authentication failed for user: {}. Error type: {}, Message: {}",
+                        loginRequest.getEmail(),
+                        e.getClass().getSimpleName(),
+                        e.getMessage());
                 response.setStatusCode(401);
                 response.setMessage("Invalid email or password");
                 return response;
             }
 
-            logger.info("Authentication successful for user: {}", loginRequest.getEmail());
+            // If we get here, authentication was successful
+            logger.info("Generating tokens for authenticated user: {}", user.getEmail());
 
             // Generate tokens
-            logger.debug("Generating JWT tokens");
             var jwt = jwtUtils.generateToken(user);
             var refreshToken = jwtUtils.generateRefreshToken(new HashMap<>(), user);
 
@@ -104,12 +117,12 @@ public class UsersManagementService {
             response.setExpirationTime("24Hrs");
             response.setMessage("Successfully Logged In");
 
-            logger.info("Login successful. Response status: {}, Role: {}", response.getStatusCode(),
+            logger.info("Login successful. Response prepared with status: {}, Role: {}",
+                    response.getStatusCode(),
                     response.getRole());
-            logger.debug("JWT Token length: {}", jwt.length());
 
         } catch (Exception e) {
-            logger.error("Unexpected error during login: {}", e.getMessage(), e);
+            logger.error("Unexpected error during login process: {}", e.getMessage(), e);
             response.setStatusCode(500);
             response.setMessage("An unexpected error occurred during login");
             response.setError(e.getMessage());
