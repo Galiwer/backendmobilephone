@@ -6,8 +6,10 @@ import com.ciro.phonestore.services.FirmwareService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.List;
@@ -47,10 +49,26 @@ public class FirmwareController {
     }
 
     // Admin endpoints
-    @PostMapping("/upload")
-    public ResponseEntity<FirmwareResponseDTO> uploadFirmware(@RequestBody FirmwareRequestDTO requestDTO) {
-        FirmwareResponseDTO responseDTO = firmwareService.createFirmware(requestDTO);
-        return new ResponseEntity<>(responseDTO, HttpStatus.CREATED);
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<FirmwareResponseDTO> uploadFirmware(
+            @RequestParam("brand") String brand,
+            @RequestParam("model") String model,
+            @RequestParam("version") String version,
+            @RequestParam("releaseNotes") String releaseNotes,
+            @RequestParam("firmwareFile") MultipartFile firmwareFile) {
+        try {
+            FirmwareRequestDTO requestDTO = new FirmwareRequestDTO();
+            requestDTO.setBrand(brand);
+            requestDTO.setModel(model);
+            requestDTO.setVersion(version);
+            requestDTO.setReleaseNotes(releaseNotes);
+            requestDTO.setFirmwareFile(firmwareFile);
+
+            FirmwareResponseDTO responseDTO = firmwareService.createFirmware(requestDTO);
+            return new ResponseEntity<>(responseDTO, HttpStatus.CREATED);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to upload firmware: " + e.getMessage());
+        }
     }
 
     @DeleteMapping("/delete/{id}")

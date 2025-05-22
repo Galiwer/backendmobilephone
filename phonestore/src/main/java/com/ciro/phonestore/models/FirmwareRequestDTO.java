@@ -1,10 +1,12 @@
 package com.ciro.phonestore.models;
 
+import org.springframework.web.multipart.MultipartFile;
+
 public class FirmwareRequestDTO {
     private String brand;
     private String model;
     private String version;
-    private String firmwareLink;
+    private MultipartFile firmwareFile;
     private String releaseNotes;
 
     public String getBrand() {
@@ -31,12 +33,12 @@ public class FirmwareRequestDTO {
         this.version = version;
     }
 
-    public String getFirmwareLink() {
-        return firmwareLink;
+    public MultipartFile getFirmwareFile() {
+        return firmwareFile;
     }
 
-    public void setFirmwareLink(String firmwareLink) {
-        this.firmwareLink = firmwareLink;
+    public void setFirmwareFile(MultipartFile firmwareFile) {
+        this.firmwareFile = firmwareFile;
     }
 
     public String getReleaseNotes() {
