@@ -65,6 +65,7 @@ public class SecurityConfig {
                                         "/api/firmware/brands",
                                         "/api/firmware/models/**",
                                         "/api/firmware/view/**",
+                                        "/api/firmware/download/**",
                                         "/images/**",
                                         "/api/faqs/published",
                                         "/error",

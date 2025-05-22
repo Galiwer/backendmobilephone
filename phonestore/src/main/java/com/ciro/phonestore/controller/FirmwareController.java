@@ -3,14 +3,22 @@ package com.ciro.phonestore.controller;
 import com.ciro.phonestore.models.FirmwareRequestDTO;
 import com.ciro.phonestore.models.FirmwareResponseDTO;
 import com.ciro.phonestore.services.FirmwareService;
+import com.ciro.phonestore.services.FileStorageService;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,10 +29,15 @@ import java.util.Map;
 public class FirmwareController {
 
     private final FirmwareService firmwareService;
+    private final FileStorageService fileStorageService;
+
+    @Value("${app.upload.dir:${user.home}/firmware-uploads}")
+    private String uploadDir;
 
     @Autowired
-    public FirmwareController(FirmwareService firmwareService) {
+    public FirmwareController(FirmwareService firmwareService, FileStorageService fileStorageService) {
         this.firmwareService = firmwareService;
+        this.fileStorageService = fileStorageService;
     }
 
     // Public endpoints
@@ -46,6 +59,26 @@ public class FirmwareController {
             @PathVariable String model) {
         List<FirmwareResponseDTO> firmwares = firmwareService.getFirmwareByBrandAndModel(brand, model);
         return ResponseEntity.ok(firmwares);
+    }
+
+    @GetMapping("/download/{filename:.+}")
+    public ResponseEntity<Resource> downloadFirmware(@PathVariable String filename) {
+        try {
+            Path filePath = Paths.get(uploadDir).resolve(filename).normalize();
+            Resource resource = new UrlResource(filePath.toUri());
+
+            if (resource.exists()) {
+                return ResponseEntity.ok()
+                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                        .header(HttpHeaders.CONTENT_DISPOSITION,
+                                "attachment; filename=\"" + resource.getFilename() + "\"")
+                        .body(resource);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     // Admin endpoints
