@@ -1,12 +1,15 @@
 package com.ciro.phonestore.controller;
 
 import com.ciro.phonestore.models.Job;
+import com.ciro.phonestore.models.JobStatus;
 import com.ciro.phonestore.services.JobRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/jobs")
@@ -18,49 +21,64 @@ public class JobController {
 
     // GET job by job number
     @GetMapping("/{jobNumber}")
-    public Job getJobByNumber(@PathVariable String jobNumber) {
+    public ResponseEntity<Job> getJobByNumber(@PathVariable String jobNumber) {
         return jobRepository.findById(jobNumber)
-                .orElseThrow(() -> new RuntimeException("Job not found: " + jobNumber));
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     // GET all jobs (for admin view)
     @GetMapping
-    public List<Job> getAllJobs() {
-        return jobRepository.findAll();
+    public ResponseEntity<List<Job>> getAllJobs() {
+        return ResponseEntity.ok(jobRepository.findAll());
     }
 
     // POST a new job
     @PostMapping("/create")
-    public Job createJob(@RequestBody Job job) {
-        // Set default status to 'In Queue' (1) when a job is created
-        job.setStatus(1);
-        job.setQueueDate(LocalDateTime.now()); // Set the queueDate to the current time
+    public ResponseEntity<Job> createJob(@RequestBody Job job) {
+        // Set default status to IN_QUEUE when a job is created
+        job.setStatus(JobStatus.IN_QUEUE);
+        job.setQueueDate(LocalDateTime.now());
 
-        // Save the job to the repository
-        return jobRepository.save(job);
+        Job savedJob = jobRepository.save(job);
+        return ResponseEntity.ok(savedJob);
     }
 
     // PUT update job status
     @PutMapping("/update/{jobNumber}")
-    public Job updateJobStatus(@PathVariable String jobNumber, @RequestBody Integer newStatus) {
-        Job job = jobRepository.findById(jobNumber)
-                .orElseThrow(() -> new RuntimeException("Job not found: " + jobNumber));
+    public ResponseEntity<?> updateJobStatus(@PathVariable String jobNumber,
+            @RequestBody Map<String, String> statusUpdate) {
+        try {
+            Job job = jobRepository.findById(jobNumber)
+                    .orElseThrow(() -> new RuntimeException("Job not found: " + jobNumber));
 
-        job.setStatus(newStatus);
+            JobStatus newStatus = JobStatus.valueOf(statusUpdate.get("status"));
+            job.setStatus(newStatus);
 
-        switch (newStatus) {
-            case 1 -> job.setQueueDate(LocalDateTime.now());
-            case 2 -> job.setProcessingDate(LocalDateTime.now());
-            case 3 -> job.setDoneDate(LocalDateTime.now());
+            switch (newStatus) {
+                case IN_QUEUE -> job.setQueueDate(LocalDateTime.now());
+                case IN_PROGRESS -> job.setProcessingDate(LocalDateTime.now());
+                case COMPLETED -> job.setDoneDate(LocalDateTime.now());
+            }
+
+            Job updatedJob = jobRepository.save(job);
+            return ResponseEntity.ok(updatedJob);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error",
+                            "Invalid status value. Allowed values are: IN_QUEUE, IN_PROGRESS, COMPLETED"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
         }
-
-        return jobRepository.save(job);
     }
 
     // DELETE a job by job number
     @DeleteMapping("/delete/{jobNumber}")
-    public String deleteJob(@PathVariable String jobNumber) {
+    public ResponseEntity<Map<String, String>> deleteJob(@PathVariable String jobNumber) {
+        if (!jobRepository.existsById(jobNumber)) {
+            return ResponseEntity.notFound().build();
+        }
         jobRepository.deleteById(jobNumber);
-        return "Job " + jobNumber + " deleted";
+        return ResponseEntity.ok(Map.of("message", "Job " + jobNumber + " deleted successfully"));
     }
 }

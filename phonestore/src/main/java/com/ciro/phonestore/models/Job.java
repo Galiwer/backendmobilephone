@@ -10,7 +10,8 @@ public class Job {
     @Column(length = 100, name = "job_number")
     private String jobNumber;
 
-    private Integer status;
+    @Enumerated(EnumType.STRING)
+    private JobStatus status;
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -19,6 +20,10 @@ public class Job {
     private LocalDateTime processingDate;
 
     private LocalDateTime doneDate;
+
+    private String deviceModel;
+
+    private String description;
 
     // Getters and Setters
     public String getJobNumber() {
@@ -29,11 +34,11 @@ public class Job {
         this.jobNumber = jobNumber;
     }
 
-    public Integer getStatus() {
+    public JobStatus getStatus() {
         return status;
     }
 
-    public void setStatus(Integer status) {
+    public void setStatus(JobStatus status) {
         this.status = status;
     }
 
@@ -67,5 +72,21 @@ public class Job {
 
     public void setDoneDate(LocalDateTime doneDate) {
         this.doneDate = doneDate;
+    }
+
+    public String getDeviceModel() {
+        return deviceModel;
+    }
+
+    public void setDeviceModel(String deviceModel) {
+        this.deviceModel = deviceModel;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 }
