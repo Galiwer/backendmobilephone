@@ -61,15 +61,11 @@ public class SecurityConfig {
                                         "/api/products",
                                         "/api/products/**",
                                         "/images/**",
-                                        "/api/faqs/**",
                                         "/api/faqs/published",
-                                        "/job/**",
-                                        "/jobs/**",
-                                        "/api/firmware/**",
-                                        "/firmware/**",
-                                        "/api/firmware/brands/**",
-                                        "/api/firmware/models/**",
-                                        "/api/firmware/device-data/**",
+                                        "/api/firmware/view/**", // Public firmware viewing
+                                        "/api/firmware/brands", // Public access to brands
+                                        "/api/firmware/models/**", // Public access to models
+                                        "/job/status/**", // Public job status checking
                                         "/error",
                                         "/actuator/**",
                                         "/actuator/health/**",
@@ -86,16 +82,24 @@ public class SecurityConfig {
                                         "/admin/delete/**",
                                         "/api/products/add",
                                         "/api/products/update/**",
-                                        "/api/products/delete/**")
+                                        "/api/products/delete/**",
+                                        "/api/firmware/upload", // Admin only
+                                        "/api/firmware/delete/**", // Admin only
+                                        "/api/firmware/update/**", // Admin only
+                                        "/job/update/**", // Admin only
+                                        "/job/delete/**", // Admin only
+                                        "/api/faqs/**")
                                 .hasAuthority("ADMIN")
-                                .requestMatchers("/user/**")
-                                .hasAuthority("USER")
+                                .requestMatchers(
+                                        "/job/create", // Authenticated users can create jobs
+                                        "/user/**")
+                                .hasAnyAuthority("USER", "ADMIN")
                                 .requestMatchers(
                                         "/adminuser/get-profile",
                                         "/adminuser/**")
                                 .hasAnyAuthority("ADMIN", "USER")
                                 .anyRequest()
-                                .permitAll();
+                                .authenticated();
                     })
                     .authenticationProvider(authenticationProvider())
                     .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
