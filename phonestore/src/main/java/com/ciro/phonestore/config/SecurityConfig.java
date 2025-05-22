@@ -19,9 +19,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
@@ -41,7 +43,7 @@ public class SecurityConfig {
 
             httpSecurity
                     .csrf(AbstractHttpConfigurer::disable)
-                    .cors(Customizer.withDefaults())
+                    .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                     .exceptionHandling(exception -> exception
                             .authenticationEntryPoint((request, response, authException) -> {
                                 logger.error("Unauthorized error: {}", authException.getMessage());
@@ -53,21 +55,27 @@ public class SecurityConfig {
                         logger.debug("Configuring authorization rules...");
                         request
                                 .requestMatchers(
+                                        "/auth/**",
                                         "/auth/login",
+                                        "/auth/register",
                                         "/public/**",
                                         "/api/products/**",
                                         "/images/**",
                                         "/api/faqs/**",
                                         "/api/faqs/published",
                                         "/job/**",
-                                        "/jobs",
+                                        "/jobs/**",
                                         "/api/firmware/**",
                                         "/firmware/**",
-                                        "/api/firmware/brands",
+                                        "/api/firmware/brands/**",
                                         "/api/firmware/models/**",
-                                        "/api/firmware/device-data",
+                                        "/api/firmware/device-data/**",
                                         "/error",
-                                        "/actuator/health")
+                                        "/actuator/**",
+                                        "/actuator/health/**",
+                                        "/v3/api-docs/**",
+                                        "/swagger-ui/**",
+                                        "/swagger-ui.html")
                                 .permitAll()
                                 .requestMatchers(
                                         "/admin/**",
@@ -84,7 +92,7 @@ public class SecurityConfig {
                                         "/adminuser/**")
                                 .hasAnyAuthority("ADMIN", "USER")
                                 .anyRequest()
-                                .authenticated();
+                                .permitAll();
                     })
                     .authenticationProvider(authenticationProvider())
                     .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
@@ -95,6 +103,28 @@ public class SecurityConfig {
             logger.error("Error configuring security filter chain", e);
             throw e;
         }
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.asList("https://mobilephoneshop.vercel.app"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"));
+        configuration.setAllowedHeaders(Arrays.asList(
+                "Authorization",
+                "Content-Type",
+                "X-Requested-With",
+                "Accept",
+                "Origin",
+                "Access-Control-Request-Method",
+                "Access-Control-Request-Headers"));
+        configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Disposition"));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 
     @Bean
@@ -127,19 +157,5 @@ public class SecurityConfig {
             logger.error("Error creating authentication manager", e);
             throw e;
         }
-    }
-
-    @Bean
-    public WebMvcConfigurer corsConfigurer() {
-        return new WebMvcConfigurer() {
-            @Override
-            public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping("/**")
-                        .allowedOrigins("*")
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                        .allowedHeaders("*")
-                        .maxAge(3600);
-            }
-        };
     }
 }

@@ -17,7 +17,7 @@ import com.ciro.phonestore.services.ProductsRepository;
 
 @RestController
 @RequestMapping("/api/products")
-@CrossOrigin("*")
+@CrossOrigin(origins = "*")
 public class ProductController {
 
     private static final String UPLOAD_DIR = "public/images/";
