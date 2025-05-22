@@ -39,12 +39,18 @@ public class JWTAuthFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         try {
             final String authHeader = request.getHeader("Authorization");
+            String path = request.getRequestURI();
             logger.debug("Processing request to {}: {} with auth header: {}",
-                    request.getMethod(), request.getRequestURI(),
+                    request.getMethod(), path,
                     authHeader != null ? "present" : "absent");
 
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                logger.debug("No Bearer token found in request to {}", request.getRequestURI());
+                if (isProtectedEndpoint(path)) {
+                    logger.warn("Protected endpoint {} accessed without Bearer token", path);
+                    sendAuthenticationError(response, "Authentication required");
+                    return;
+                }
+                logger.debug("No Bearer token found in request to {}", path);
                 filterChain.doFilter(request, response);
                 return;
             }
@@ -113,14 +119,31 @@ public class JWTAuthFilter extends OncePerRequestFilter {
                 path.startsWith("/api/products/get/") ||
                 path.startsWith("/api/jobs/status/") ||
                 path.startsWith("/api/jobs/track/") ||
+                path.startsWith("/api/jobs/public/") ||
                 path.startsWith("/images/") ||
+                path.startsWith("/api/faqs/published") ||
+                path.startsWith("/api/firmware/view/") ||
+                path.startsWith("/api/firmware/brands") ||
+                path.startsWith("/api/firmware/models/") ||
                 path.equals("/error") ||
                 "OPTIONS".equalsIgnoreCase(request.getMethod());
 
         if (shouldNotFilter) {
             logger.debug("Skipping JWT filter for path: {}", path);
+        } else {
+            logger.debug("Will apply JWT filter for path: {}", path);
         }
 
         return shouldNotFilter;
+    }
+
+    private boolean isProtectedEndpoint(String path) {
+        return path.startsWith("/api/jobs/") &&
+                !path.startsWith("/api/jobs/status/") &&
+                !path.startsWith("/api/jobs/track/") &&
+                !path.startsWith("/api/jobs/public/") ||
+                path.startsWith("/admin/") ||
+                path.startsWith("/dashboard/") ||
+                path.startsWith("/api/admin/");
     }
 }

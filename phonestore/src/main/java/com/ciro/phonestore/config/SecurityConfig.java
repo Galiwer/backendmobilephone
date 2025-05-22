@@ -60,8 +60,9 @@ public class SecurityConfig {
                                         "/public/**",
                                         "/api/products/list",
                                         "/api/products/get/**",
-                                        "/api/jobs/status/**", // Public job status endpoint
-                                        "/api/jobs/track/**", // Public job tracking
+                                        "/api/jobs/status/**",
+                                        "/api/jobs/track/**",
+                                        "/api/jobs/public/**",
                                         "/images/**",
                                         "/api/faqs/published",
                                         "/api/firmware/view/**",
@@ -84,6 +85,8 @@ public class SecurityConfig {
                                         "/api/products",
                                         "/api/products/update/**",
                                         "/api/products/delete/**",
+                                        "/api/jobs", // Admin job listing
+                                        "/api/jobs/{id}", // Admin job details
                                         "/api/jobs/create/**", // Admin job creation
                                         "/api/jobs/update/**", // Admin job updates
                                         "/api/jobs/delete/**", // Admin job deletion
@@ -98,6 +101,7 @@ public class SecurityConfig {
                                 .requestMatchers(
                                         "/api/jobs/create", // Authenticated users can create jobs
                                         "/api/jobs/my/**", // Users can view their own jobs
+                                        "/api/jobs/user/**", // User's job endpoints
                                         "/user/**",
                                         "/api/user/**") // User-specific endpoints
                                 .hasAnyAuthority("USER", "ADMIN")
