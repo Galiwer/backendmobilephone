@@ -4,6 +4,7 @@ import java.io.InputStream;
 import java.nio.file.*;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -28,24 +29,41 @@ public class ProductController {
     @Autowired
     private ProductsRepository repo;
 
-    @GetMapping
+    @GetMapping("/list")
     public List<Product> getAllProducts() {
         return repo.findAll();
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/get/{id}")
     public ResponseEntity<Product> getProductById(@PathVariable int id) {
         Optional<Product> productOpt = repo.findById(id);
         return productOpt.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<Product> createProduct(@ModelAttribute ProductDto productDto) {
-        logger.info("Received request to create product: {}", productDto.getName());
+    public ResponseEntity<?> createProduct(@ModelAttribute ProductDto productDto) {
+        logger.info("Received request to create product with data: name={}, brand={}, category={}",
+                productDto.getName(), productDto.getBrand(), productDto.getCategory());
+
+        // Validate required fields
+        if (productDto.getName() == null || productDto.getName().trim().isEmpty()) {
+            logger.error("Product creation failed: Name is required");
+            return ResponseEntity.badRequest().body(Map.of("error", "Name is required"));
+        }
+
+        if (productDto.getBrand() == null || productDto.getBrand().trim().isEmpty()) {
+            logger.error("Product creation failed: Brand is required");
+            return ResponseEntity.badRequest().body(Map.of("error", "Brand is required"));
+        }
+
+        if (productDto.getCategory() == null || productDto.getCategory().trim().isEmpty()) {
+            logger.error("Product creation failed: Category is required");
+            return ResponseEntity.badRequest().body(Map.of("error", "Category is required"));
+        }
 
         if (productDto.getImageFile() == null || productDto.getImageFile().isEmpty()) {
             logger.error("Product creation failed: Image file is required");
-            return ResponseEntity.badRequest().body(null);
+            return ResponseEntity.badRequest().body(Map.of("error", "Image file is required"));
         }
 
         try {
@@ -54,23 +72,26 @@ public class ProductController {
             String storageFileName = createdAt.getTime() + "_" + image.getOriginalFilename();
             logger.debug("Processing image file: {}", storageFileName);
 
+            // Create upload directory if it doesn't exist
             Path uploadPath = Paths.get(UPLOAD_DIR);
             if (!Files.exists(uploadPath)) {
                 logger.debug("Creating upload directory: {}", UPLOAD_DIR);
                 Files.createDirectories(uploadPath);
             }
 
+            // Save the image file
             try (InputStream inputStream = image.getInputStream()) {
                 Files.copy(inputStream, uploadPath.resolve(storageFileName), StandardCopyOption.REPLACE_EXISTING);
                 logger.debug("Image file saved successfully: {}", storageFileName);
             }
 
+            // Create and save the product
             Product product = new Product();
-            product.setName(productDto.getName());
-            product.setBrand(productDto.getBrand());
-            product.setCategory(productDto.getCategory());
+            product.setName(productDto.getName().trim());
+            product.setBrand(productDto.getBrand().trim());
+            product.setCategory(productDto.getCategory().trim());
             product.setPrice(productDto.getPrice());
-            product.setDescription(productDto.getDescription());
+            product.setDescription(productDto.getDescription() != null ? productDto.getDescription().trim() : "");
             product.setCreatedAt(createdAt);
             product.setImageFileName(storageFileName);
 
@@ -79,7 +100,8 @@ public class ProductController {
             return ResponseEntity.ok(savedProduct);
         } catch (Exception ex) {
             logger.error("Error creating product: {}", ex.getMessage(), ex);
-            return ResponseEntity.internalServerError().build();
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", "Failed to create product: " + ex.getMessage()));
         }
     }
 
@@ -125,7 +147,7 @@ public class ProductController {
         }
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/delete/{id}")
     public ResponseEntity<?> deleteProduct(@PathVariable int id) {
         Optional<Product> productOpt = repo.findById(id);
         if (productOpt.isEmpty()) {

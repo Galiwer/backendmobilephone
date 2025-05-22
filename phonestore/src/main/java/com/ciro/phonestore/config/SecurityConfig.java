@@ -58,8 +58,8 @@ public class SecurityConfig {
                                         "/auth/login",
                                         "/auth/register",
                                         "/public/**",
-                                        "/api/products",
-                                        "/api/products/**",
+                                        "/api/products/get/**",
+                                        "/api/products/list",
                                         "/images/**",
                                         "/api/faqs/published",
                                         "/api/firmware/view/**", // Public firmware viewing
@@ -81,6 +81,7 @@ public class SecurityConfig {
                                         "/admin/update/**",
                                         "/admin/delete/**",
                                         "/api/products/add",
+                                        "/api/products", // POST endpoint for creating products
                                         "/api/products/update/**",
                                         "/api/products/delete/**",
                                         "/api/firmware/upload", // Admin only
