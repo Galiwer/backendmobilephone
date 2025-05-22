@@ -2,11 +2,13 @@ package com.ciro.phonestore.config;
 
 import com.ciro.phonestore.services.JWTUtils;
 import com.ciro.phonestore.services.OurUserDetailsService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,10 +20,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 @Component
 public class JWTAuthFilter extends OncePerRequestFilter {
     private static final Logger logger = LoggerFactory.getLogger(JWTAuthFilter.class);
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
     private JWTUtils jwtUtils;
@@ -34,7 +39,9 @@ public class JWTAuthFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         try {
             final String authHeader = request.getHeader("Authorization");
-            logger.debug("Processing request to {}: {}", request.getMethod(), request.getRequestURI());
+            logger.debug("Processing request to {}: {} with auth header: {}",
+                    request.getMethod(), request.getRequestURI(),
+                    authHeader != null ? "present" : "absent");
 
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 logger.debug("No Bearer token found in request to {}", request.getRequestURI());
@@ -48,31 +55,50 @@ public class JWTAuthFilter extends OncePerRequestFilter {
             if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 logger.debug("Found JWT token for user: {}", userEmail);
 
-                UserDetails userDetails = ourUserDetailsService.loadUserByUsername(userEmail);
+                try {
+                    UserDetails userDetails = ourUserDetailsService.loadUserByUsername(userEmail);
 
-                if (jwtUtils.isTokenValid(jwtToken, userDetails)) {
-                    logger.debug("JWT token is valid for user: {}", userEmail);
+                    if (jwtUtils.isTokenValid(jwtToken, userDetails)) {
+                        logger.debug("JWT token is valid for user: {} with roles: {}",
+                                userEmail, userDetails.getAuthorities());
 
-                    SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            userDetails, null, userDetails.getAuthorities());
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    securityContext.setAuthentication(authToken);
-                    SecurityContextHolder.setContext(securityContext);
+                        SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
+                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                                userDetails, null, userDetails.getAuthorities());
+                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        securityContext.setAuthentication(authToken);
+                        SecurityContextHolder.setContext(securityContext);
 
-                    logger.debug("Successfully authenticated user: {} with authorities: {}",
-                            userEmail, userDetails.getAuthorities());
-                } else {
-                    logger.warn("Invalid JWT token for user: {}", userEmail);
+                        logger.debug("Successfully authenticated user: {} with authorities: {}",
+                                userEmail, userDetails.getAuthorities());
+                    } else {
+                        logger.warn("Invalid JWT token for user: {}", userEmail);
+                        sendAuthenticationError(response, "Invalid JWT token");
+                        return;
+                    }
+                } catch (Exception e) {
+                    logger.error("Error loading user details: {}", e.getMessage());
+                    sendAuthenticationError(response, "Error loading user details");
+                    return;
                 }
             }
 
             filterChain.doFilter(request, response);
         } catch (Exception e) {
             logger.error("Error processing JWT token: {}", e.getMessage(), e);
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.getWriter().write("Error processing JWT token: " + e.getMessage());
+            sendAuthenticationError(response, e.getMessage());
         }
+    }
+
+    private void sendAuthenticationError(HttpServletResponse response, String message) throws IOException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+
+        Map<String, String> error = new HashMap<>();
+        error.put("error", "Authentication failed");
+        error.put("message", message);
+
+        objectMapper.writeValue(response.getOutputStream(), error);
     }
 
     @Override
@@ -83,6 +109,11 @@ public class JWTAuthFilter extends OncePerRequestFilter {
         // Don't filter public endpoints
         boolean shouldNotFilter = path.startsWith("/auth/") ||
                 path.startsWith("/public/") ||
+                path.startsWith("/api/products/list") ||
+                path.startsWith("/api/products/get/") ||
+                path.startsWith("/api/jobs/status/") ||
+                path.startsWith("/api/jobs/track/") ||
+                path.startsWith("/images/") ||
                 path.equals("/error") ||
                 "OPTIONS".equalsIgnoreCase(request.getMethod());
 

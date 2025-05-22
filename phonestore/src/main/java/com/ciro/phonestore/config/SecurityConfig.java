@@ -58,14 +58,15 @@ public class SecurityConfig {
                                         "/auth/login",
                                         "/auth/register",
                                         "/public/**",
-                                        "/api/products/list", // Public endpoint for listing products
-                                        "/api/products/get/**", // Public endpoint for getting a single product
+                                        "/api/products/list",
+                                        "/api/products/get/**",
+                                        "/api/jobs/status/**", // Public job status endpoint
+                                        "/api/jobs/track/**", // Public job tracking
                                         "/images/**",
                                         "/api/faqs/published",
                                         "/api/firmware/view/**",
                                         "/api/firmware/brands",
                                         "/api/firmware/models/**",
-                                        "/job/status/**",
                                         "/error",
                                         "/actuator/**",
                                         "/actuator/health/**",
@@ -80,19 +81,25 @@ public class SecurityConfig {
                                         "/admin/get-users/**",
                                         "/admin/update/**",
                                         "/admin/delete/**",
-                                        "/api/products", // POST endpoint for creating products
+                                        "/api/products",
                                         "/api/products/update/**",
                                         "/api/products/delete/**",
+                                        "/api/jobs/create/**", // Admin job creation
+                                        "/api/jobs/update/**", // Admin job updates
+                                        "/api/jobs/delete/**", // Admin job deletion
+                                        "/api/jobs/manage/**", // Admin job management
                                         "/api/firmware/upload",
                                         "/api/firmware/delete/**",
                                         "/api/firmware/update/**",
-                                        "/job/update/**",
-                                        "/job/delete/**",
-                                        "/api/faqs/**")
+                                        "/api/faqs/**",
+                                        "/dashboard/**", // Admin dashboard endpoints
+                                        "/api/admin/**") // Admin API endpoints
                                 .hasAuthority("ADMIN")
                                 .requestMatchers(
-                                        "/job/create", // Authenticated users can create jobs
-                                        "/user/**")
+                                        "/api/jobs/create", // Authenticated users can create jobs
+                                        "/api/jobs/my/**", // Users can view their own jobs
+                                        "/user/**",
+                                        "/api/user/**") // User-specific endpoints
                                 .hasAnyAuthority("USER", "ADMIN")
                                 .requestMatchers(
                                         "/adminuser/get-profile",
