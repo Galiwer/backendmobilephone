@@ -30,14 +30,32 @@ public class ProductController {
     private ProductsRepository repo;
 
     @GetMapping("/list")
-    public List<Product> getAllProducts() {
-        return repo.findAll();
+    public ResponseEntity<List<Product>> getAllProducts() {
+        try {
+            List<Product> products = repo.findAll();
+            logger.debug("Retrieved {} products", products.size());
+            return ResponseEntity.ok(products);
+        } catch (Exception e) {
+            logger.error("Error retrieving products: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     @GetMapping("/get/{id}")
     public ResponseEntity<Product> getProductById(@PathVariable int id) {
-        Optional<Product> productOpt = repo.findById(id);
-        return productOpt.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+        try {
+            Optional<Product> productOpt = repo.findById(id);
+            if (productOpt.isPresent()) {
+                logger.debug("Retrieved product with id: {}", id);
+                return ResponseEntity.ok(productOpt.get());
+            } else {
+                logger.debug("Product not found with id: {}", id);
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            logger.error("Error retrieving product with id {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     @PostMapping
@@ -106,15 +124,14 @@ public class ProductController {
     }
 
     @PutMapping("/update/{id}")
-    public ResponseEntity<Product> updateProduct(
-            @PathVariable int id,
-            @ModelAttribute ProductDto productDto) {
-        Optional<Product> productOpt = repo.findById(id);
-        if (productOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-
+    public ResponseEntity<?> updateProduct(@PathVariable int id, @ModelAttribute ProductDto productDto) {
         try {
+            Optional<Product> productOpt = repo.findById(id);
+            if (productOpt.isEmpty()) {
+                logger.debug("Product not found for update with id: {}", id);
+                return ResponseEntity.notFound().build();
+            }
+
             Product product = productOpt.get();
 
             if (productDto.getImageFile() != null && !productDto.getImageFile().isEmpty()) {
@@ -135,33 +152,48 @@ public class ProductController {
                 product.setImageFileName(storageFileName);
             }
 
-            product.setName(productDto.getName());
-            product.setBrand(productDto.getBrand());
-            product.setCategory(productDto.getCategory());
-            product.setPrice(productDto.getPrice());
-            product.setDescription(productDto.getDescription());
+            // Update other fields
+            if (productDto.getName() != null)
+                product.setName(productDto.getName().trim());
+            if (productDto.getBrand() != null)
+                product.setBrand(productDto.getBrand().trim());
+            if (productDto.getCategory() != null)
+                product.setCategory(productDto.getCategory().trim());
+            if (productDto.getPrice() > 0)
+                product.setPrice(productDto.getPrice());
+            if (productDto.getDescription() != null)
+                product.setDescription(productDto.getDescription().trim());
 
-            return ResponseEntity.ok(repo.save(product));
+            Product updatedProduct = repo.save(product);
+            logger.info("Product updated successfully with ID: {}", updatedProduct.getId());
+            return ResponseEntity.ok(updatedProduct);
         } catch (Exception ex) {
-            return ResponseEntity.internalServerError().build();
+            logger.error("Error updating product with id {}: {}", id, ex.getMessage(), ex);
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", "Failed to update product: " + ex.getMessage()));
         }
     }
 
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<?> deleteProduct(@PathVariable int id) {
-        Optional<Product> productOpt = repo.findById(id);
-        if (productOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-
         try {
+            Optional<Product> productOpt = repo.findById(id);
+            if (productOpt.isEmpty()) {
+                logger.debug("Product not found for deletion with id: {}", id);
+                return ResponseEntity.notFound().build();
+            }
+
             Product product = productOpt.get();
             Path imagePath = Paths.get(UPLOAD_DIR + product.getImageFileName());
             Files.deleteIfExists(imagePath);
             repo.delete(product);
-            return ResponseEntity.ok().build();
+
+            logger.info("Product deleted successfully with ID: {}", id);
+            return ResponseEntity.ok().body(Map.of("message", "Product deleted successfully"));
         } catch (Exception ex) {
-            return ResponseEntity.internalServerError().build();
+            logger.error("Error deleting product with id {}: {}", id, ex.getMessage(), ex);
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", "Failed to delete product: " + ex.getMessage()));
         }
     }
 }

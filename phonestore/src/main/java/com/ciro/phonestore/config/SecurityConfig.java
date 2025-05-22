@@ -58,14 +58,14 @@ public class SecurityConfig {
                                         "/auth/login",
                                         "/auth/register",
                                         "/public/**",
-                                        "/api/products/get/**",
-                                        "/api/products/list",
+                                        "/api/products/list", // Public endpoint for listing products
+                                        "/api/products/get/**", // Public endpoint for getting a single product
                                         "/images/**",
                                         "/api/faqs/published",
-                                        "/api/firmware/view/**", // Public firmware viewing
-                                        "/api/firmware/brands", // Public access to brands
-                                        "/api/firmware/models/**", // Public access to models
-                                        "/job/status/**", // Public job status checking
+                                        "/api/firmware/view/**",
+                                        "/api/firmware/brands",
+                                        "/api/firmware/models/**",
+                                        "/job/status/**",
                                         "/error",
                                         "/actuator/**",
                                         "/actuator/health/**",
@@ -80,15 +80,14 @@ public class SecurityConfig {
                                         "/admin/get-users/**",
                                         "/admin/update/**",
                                         "/admin/delete/**",
-                                        "/api/products/add",
                                         "/api/products", // POST endpoint for creating products
                                         "/api/products/update/**",
                                         "/api/products/delete/**",
-                                        "/api/firmware/upload", // Admin only
-                                        "/api/firmware/delete/**", // Admin only
-                                        "/api/firmware/update/**", // Admin only
-                                        "/job/update/**", // Admin only
-                                        "/job/delete/**", // Admin only
+                                        "/api/firmware/upload",
+                                        "/api/firmware/delete/**",
+                                        "/api/firmware/update/**",
+                                        "/job/update/**",
+                                        "/job/delete/**",
                                         "/api/faqs/**")
                                 .hasAuthority("ADMIN")
                                 .requestMatchers(
