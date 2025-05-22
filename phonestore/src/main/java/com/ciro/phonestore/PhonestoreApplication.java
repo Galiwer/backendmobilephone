@@ -8,6 +8,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.lang.NonNull;
 
 @SpringBootApplication
 public class PhonestoreApplication implements ApplicationListener<ContextRefreshedEvent> {
@@ -31,7 +32,7 @@ public class PhonestoreApplication implements ApplicationListener<ContextRefresh
 	}
 
 	@Override
-	public void onApplicationEvent(ContextRefreshedEvent event) {
+	public void onApplicationEvent(@NonNull ContextRefreshedEvent event) {
 		try {
 			logger.info("Application context refreshed");
 			logger.info("Active profile: {}", env.getActiveProfiles()[0]);

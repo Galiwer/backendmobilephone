@@ -9,7 +9,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -59,6 +58,7 @@ public class SecurityConfig {
                                         "/auth/login",
                                         "/auth/register",
                                         "/public/**",
+                                        "/api/products",
                                         "/api/products/**",
                                         "/images/**",
                                         "/api/faqs/**",
@@ -83,7 +83,10 @@ public class SecurityConfig {
                                         "/admin/get-all-users",
                                         "/admin/get-users/**",
                                         "/admin/update/**",
-                                        "/admin/delete/**")
+                                        "/admin/delete/**",
+                                        "/api/products/add",
+                                        "/api/products/update/**",
+                                        "/api/products/delete/**")
                                 .hasAuthority("ADMIN")
                                 .requestMatchers("/user/**")
                                 .hasAuthority("USER")
