@@ -25,19 +25,35 @@ public class FirmwareController {
         this.firmwareService = firmwareService;
     }
 
-    @PostMapping
-    public ResponseEntity<FirmwareResponseDTO> createFirmware(@RequestBody FirmwareRequestDTO requestDTO) {
-        FirmwareResponseDTO responseDTO = firmwareService.createFirmware(requestDTO);
-        return new ResponseEntity<>(responseDTO, HttpStatus.CREATED);
-    }
-
+    // Public endpoints
     @GetMapping("/brands")
     public ResponseEntity<List<String>> getAllBrands() {
         List<String> brands = firmwareService.getAllBrands();
         return ResponseEntity.ok(brands);
     }
 
-    @DeleteMapping("/{id}")
+    @GetMapping("/models/{brand}")
+    public ResponseEntity<List<String>> getModelsByBrand(@PathVariable String brand) {
+        List<String> models = firmwareService.getModelsByBrand(brand);
+        return ResponseEntity.ok(models);
+    }
+
+    @GetMapping("/view/{brand}/{model}")
+    public ResponseEntity<List<FirmwareResponseDTO>> getFirmwareVersions(
+            @PathVariable String brand,
+            @PathVariable String model) {
+        List<FirmwareResponseDTO> firmwares = firmwareService.getFirmwareByBrandAndModel(brand, model);
+        return ResponseEntity.ok(firmwares);
+    }
+
+    // Admin endpoints
+    @PostMapping("/upload")
+    public ResponseEntity<FirmwareResponseDTO> uploadFirmware(@RequestBody FirmwareRequestDTO requestDTO) {
+        FirmwareResponseDTO responseDTO = firmwareService.createFirmware(requestDTO);
+        return new ResponseEntity<>(responseDTO, HttpStatus.CREATED);
+    }
+
+    @DeleteMapping("/delete/{id}")
     public ResponseEntity<?> deleteFirmware(@PathVariable Long id) {
         try {
             firmwareService.deleteFirmware(id);
@@ -51,23 +67,9 @@ public class FirmwareController {
         }
     }
 
-    @GetMapping
+    @GetMapping("/admin/list")
     public ResponseEntity<List<FirmwareResponseDTO>> getAllFirmware() {
         List<FirmwareResponseDTO> firmwares = firmwareService.getAllFirmware();
-        return ResponseEntity.ok(firmwares);
-    }
-
-    @GetMapping("/models/{brand}")
-    public ResponseEntity<List<String>> getModelsByBrand(@PathVariable String brand) {
-        List<String> models = firmwareService.getModelsByBrand(brand);
-        return ResponseEntity.ok(models);
-    }
-
-    @GetMapping("/{brand}/{model}")
-    public ResponseEntity<List<FirmwareResponseDTO>> getFirmwareVersions(
-            @PathVariable String brand,
-            @PathVariable String model) {
-        List<FirmwareResponseDTO> firmwares = firmwareService.getFirmwareByBrandAndModel(brand, model);
         return ResponseEntity.ok(firmwares);
     }
 
