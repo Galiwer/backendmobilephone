@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
+@RequestMapping("/api/jobs")
 @CrossOrigin(origins = "*")
 public class JobController {
 
@@ -16,20 +17,20 @@ public class JobController {
     private JobRepository jobRepository;
 
     // GET job by job number
-    @GetMapping("/job/{jobNumber}")
+    @GetMapping("/{jobNumber}")
     public Job getJobByNumber(@PathVariable String jobNumber) {
         return jobRepository.findById(jobNumber)
                 .orElseThrow(() -> new RuntimeException("Job not found: " + jobNumber));
     }
 
     // GET all jobs (for admin view)
-    @GetMapping("/jobs")
+    @GetMapping
     public List<Job> getAllJobs() {
         return jobRepository.findAll();
     }
 
     // POST a new job
-    @PostMapping("/job")
+    @PostMapping("/create")
     public Job createJob(@RequestBody Job job) {
         // Set default status to 'In Queue' (1) when a job is created
         job.setStatus(1);
@@ -40,7 +41,7 @@ public class JobController {
     }
 
     // PUT update job status
-    @PutMapping("/job/{jobNumber}/status")
+    @PutMapping("/update/{jobNumber}")
     public Job updateJobStatus(@PathVariable String jobNumber, @RequestBody Integer newStatus) {
         Job job = jobRepository.findById(jobNumber)
                 .orElseThrow(() -> new RuntimeException("Job not found: " + jobNumber));
@@ -57,7 +58,7 @@ public class JobController {
     }
 
     // DELETE a job by job number
-    @DeleteMapping("/job/{jobNumber}")
+    @DeleteMapping("/delete/{jobNumber}")
     public String deleteJob(@PathVariable String jobNumber) {
         jobRepository.deleteById(jobNumber);
         return "Job " + jobNumber + " deleted";
