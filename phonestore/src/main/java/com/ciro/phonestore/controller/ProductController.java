@@ -6,6 +6,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +23,7 @@ import com.ciro.phonestore.services.ProductsRepository;
 public class ProductController {
 
     private static final String UPLOAD_DIR = "public/images/";
+    private static final Logger logger = LoggerFactory.getLogger(ProductController.class);
 
     @Autowired
     private ProductsRepository repo;
@@ -38,7 +41,10 @@ public class ProductController {
 
     @PostMapping
     public ResponseEntity<Product> createProduct(@ModelAttribute ProductDto productDto) {
+        logger.info("Received request to create product: {}", productDto.getName());
+
         if (productDto.getImageFile() == null || productDto.getImageFile().isEmpty()) {
+            logger.error("Product creation failed: Image file is required");
             return ResponseEntity.badRequest().body(null);
         }
 
@@ -46,14 +52,17 @@ public class ProductController {
             MultipartFile image = productDto.getImageFile();
             Date createdAt = new Date();
             String storageFileName = createdAt.getTime() + "_" + image.getOriginalFilename();
+            logger.debug("Processing image file: {}", storageFileName);
 
             Path uploadPath = Paths.get(UPLOAD_DIR);
             if (!Files.exists(uploadPath)) {
+                logger.debug("Creating upload directory: {}", UPLOAD_DIR);
                 Files.createDirectories(uploadPath);
             }
 
             try (InputStream inputStream = image.getInputStream()) {
                 Files.copy(inputStream, uploadPath.resolve(storageFileName), StandardCopyOption.REPLACE_EXISTING);
+                logger.debug("Image file saved successfully: {}", storageFileName);
             }
 
             Product product = new Product();
@@ -65,8 +74,11 @@ public class ProductController {
             product.setCreatedAt(createdAt);
             product.setImageFileName(storageFileName);
 
-            return ResponseEntity.ok(repo.save(product));
+            Product savedProduct = repo.save(product);
+            logger.info("Product created successfully with ID: {}", savedProduct.getId());
+            return ResponseEntity.ok(savedProduct);
         } catch (Exception ex) {
+            logger.error("Error creating product: {}", ex.getMessage(), ex);
             return ResponseEntity.internalServerError().build();
         }
     }
