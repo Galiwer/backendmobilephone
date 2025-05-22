@@ -111,7 +111,10 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("https://mobilephoneshop.vercel.app"));
+        configuration.setAllowedOrigins(Arrays.asList(
+                "https://mobilephoneshop.vercel.app",
+                "http://localhost:5173" // Development frontend URL
+        ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"));
         configuration.setAllowedHeaders(Arrays.asList(
                 "Authorization",
@@ -127,6 +130,8 @@ public class SecurityConfig {
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
+
+        logger.info("CORS configuration initialized with allowed origins: {}", configuration.getAllowedOrigins());
         return source;
     }
 

@@ -55,33 +55,45 @@ public class UsersManagementService {
     public ReqRes login(ReqRes loginRequest) {
         ReqRes response = new ReqRes();
         try {
-            logger.debug("Login attempt for email: {}", loginRequest.getEmail());
+            logger.info("Login attempt for email: {}", loginRequest.getEmail());
+
+            if (loginRequest.getEmail() == null || loginRequest.getPassword() == null) {
+                logger.error("Login attempt with null email or password");
+                response.setStatusCode(400);
+                response.setMessage("Email and password are required");
+                return response;
+            }
 
             // First check if user exists
             var userOptional = usersRepo.findByEmail(loginRequest.getEmail());
             if (userOptional.isEmpty()) {
-                logger.debug("User not found with email: {}", loginRequest.getEmail());
+                logger.warn("User not found with email: {}", loginRequest.getEmail());
                 response.setStatusCode(401);
-                response.setMessage("User not found with email: " + loginRequest.getEmail());
+                response.setMessage("Invalid email or password");
                 return response;
             }
 
-            logger.debug("User found, attempting authentication");
-
-            // For debugging only - remove in production
             var user = userOptional.get();
-            logger.debug("Stored password hash: {}", user.getPassword());
-            logger.debug("User role: {}", user.getRole());
+            logger.info("User found with role: {}", user.getRole());
 
-            // Attempt authentication
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            loginRequest.getEmail(),
-                            loginRequest.getPassword()));
+            try {
+                // Attempt authentication
+                logger.debug("Attempting authentication with provided credentials");
+                authenticationManager.authenticate(
+                        new UsernamePasswordAuthenticationToken(
+                                loginRequest.getEmail(),
+                                loginRequest.getPassword()));
+            } catch (Exception e) {
+                logger.error("Authentication failed for user: {}. Error: {}", loginRequest.getEmail(), e.getMessage());
+                response.setStatusCode(401);
+                response.setMessage("Invalid email or password");
+                return response;
+            }
 
-            logger.debug("Authentication successful, generating tokens");
+            logger.info("Authentication successful for user: {}", loginRequest.getEmail());
 
-            // If authentication successful, generate tokens
+            // Generate tokens
+            logger.debug("Generating JWT tokens");
             var jwt = jwtUtils.generateToken(user);
             var refreshToken = jwtUtils.generateRefreshToken(new HashMap<>(), user);
 
@@ -92,14 +104,15 @@ public class UsersManagementService {
             response.setExpirationTime("24Hrs");
             response.setMessage("Successfully Logged In");
 
-        } catch (org.springframework.security.authentication.BadCredentialsException e) {
-            logger.error("Bad credentials error: {}", e.getMessage());
-            response.setStatusCode(401);
-            response.setMessage("Invalid email or password");
+            logger.info("Login successful. Response status: {}, Role: {}", response.getStatusCode(),
+                    response.getRole());
+            logger.debug("JWT Token length: {}", jwt.length());
+
         } catch (Exception e) {
-            logger.error("Login error: {}", e.getMessage());
+            logger.error("Unexpected error during login: {}", e.getMessage(), e);
             response.setStatusCode(500);
-            response.setMessage("An error occurred during login: " + e.getMessage());
+            response.setMessage("An unexpected error occurred during login");
+            response.setError(e.getMessage());
         }
         return response;
     }
