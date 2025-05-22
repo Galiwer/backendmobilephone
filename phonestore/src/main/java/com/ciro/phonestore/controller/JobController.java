@@ -19,7 +19,15 @@ public class JobController {
     @Autowired
     private JobRepository jobRepository;
 
-    // GET job by job number
+    // Public endpoint for job tracking
+    @GetMapping("/public/{jobNumber}")
+    public ResponseEntity<Job> getJobByNumberPublic(@PathVariable String jobNumber) {
+        return jobRepository.findById(jobNumber)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    // GET job by job number (admin only)
     @GetMapping("/{jobNumber}")
     public ResponseEntity<Job> getJobByNumber(@PathVariable String jobNumber) {
         return jobRepository.findById(jobNumber)
