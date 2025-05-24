@@ -74,7 +74,7 @@ public class FirmwareService {
     public List<Firmware> getFirmwareByBrandAndModel(String brand, String model) {
         try {
             logger.info("Retrieving firmware for brand: {} and model: {}", brand, model);
-            List<Firmware> firmwareList = firmwareRepository.findByBrandAndModelAndActiveTrue(brand, model);
+            List<Firmware> firmwareList = firmwareRepository.findByBrandAndModelOrderByCreatedAtDesc(brand, model);
             logger.info("Found {} firmware entries for brand: {} and model: {}", firmwareList.size(), brand, model);
             return firmwareList;
         } catch (Exception e) {

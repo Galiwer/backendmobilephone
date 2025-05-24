@@ -99,19 +99,47 @@ public class FirmwareController {
         logger.info("Received firmware download request for ID: {}", id);
         try {
             Firmware firmware = firmwareService.getFirmware(id);
-            Map<String, Object> response = new HashMap<>();
 
+            // For Google Drive links
             if (firmware.getFirmwareLink() != null && !firmware.getFirmwareLink().isEmpty()) {
                 logger.info("Returning Google Drive link for firmware ID: {}", id);
+                Map<String, Object> response = new HashMap<>();
                 response.put("type", "link");
                 response.put("url", firmware.getFirmwareLink());
                 response.put("fileName", String.format("%s_%s_firmware.zip", firmware.getBrand(), firmware.getModel()));
                 return ResponseEntity.ok(response);
             }
 
+            // For direct file downloads
             if (firmware.getFileName() == null || firmware.getFileName().isEmpty()) {
                 logger.error("No file or link found for firmware ID: {}", id);
                 throw new RuntimeException("No firmware file or link available");
+            }
+
+            String fileName = String.format("%s_%s_firmware.zip", firmware.getBrand(), firmware.getModel());
+            Map<String, Object> response = new HashMap<>();
+            response.put("type", "file");
+            response.put("url", String.format("/api/firmware/file/%d", firmware.getId()));
+            response.put("fileName", fileName);
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            logger.error("Error downloading firmware with ID: {}", id, e);
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Failed to download firmware: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    @GetMapping("/file/{id}")
+    public ResponseEntity<Resource> downloadFirmwareFile(@PathVariable Long id) {
+        logger.info("Received firmware file download request for ID: {}", id);
+        try {
+            Firmware firmware = firmwareService.getFirmware(id);
+
+            if (firmware.getFileName() == null || firmware.getFileName().isEmpty()) {
+                logger.error("No file found for firmware ID: {}", id);
+                throw new RuntimeException("No firmware file available");
             }
 
             Resource resource = fileStorageService.loadFileAsResource(firmware.getFileName());
@@ -125,10 +153,8 @@ public class FirmwareController {
                     .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition)
                     .body(resource);
         } catch (Exception e) {
-            logger.error("Error downloading firmware with ID: {}", id, e);
-            Map<String, String> response = new HashMap<>();
-            response.put("message", "Failed to download firmware: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+            logger.error("Error downloading firmware file with ID: {}", id, e);
+            throw new RuntimeException("Could not download firmware file", e);
         }
     }
 
@@ -211,6 +237,22 @@ public class FirmwareController {
             logger.error("Error retrieving firmware details for ID: {}", id, e);
             Map<String, String> response = new HashMap<>();
             response.put("message", "Failed to retrieve firmware details: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    @GetMapping("/list/{brand}/{model}")
+    public ResponseEntity<?> getFirmwareByBrandAndModel(
+            @PathVariable String brand,
+            @PathVariable String model) {
+        logger.info("Retrieving firmware list for brand: {} and model: {}", brand, model);
+        try {
+            List<Firmware> firmwareList = firmwareService.getFirmwareByBrandAndModel(brand, model);
+            return ResponseEntity.ok(firmwareList);
+        } catch (Exception e) {
+            logger.error("Error retrieving firmware list for brand: {} and model: {}", brand, model, e);
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Failed to retrieve firmware list: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
