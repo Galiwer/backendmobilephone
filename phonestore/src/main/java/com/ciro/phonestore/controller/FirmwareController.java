@@ -20,6 +20,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/firmware")
+@CrossOrigin(origins = "*")
 public class FirmwareController {
     private static final Logger logger = LoggerFactory.getLogger(FirmwareController.class);
 
@@ -68,8 +69,17 @@ public class FirmwareController {
             }
 
             Firmware savedFirmware = firmwareService.saveFirmware(firmware);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("id", savedFirmware.getId());
+            response.put("brand", savedFirmware.getBrand());
+            response.put("model", savedFirmware.getModel());
+            response.put("version", savedFirmware.getVersion());
+            response.put("type", firmwareFile != null ? "file" : "link");
+            response.put("downloadUrl", String.format("/api/firmware/download/%d", savedFirmware.getId()));
+
             logger.info("Firmware entry saved successfully with ID: {}", savedFirmware.getId());
-            return ResponseEntity.ok(savedFirmware);
+            return ResponseEntity.ok(response);
 
         } catch (IllegalArgumentException e) {
             logger.error("Validation error during firmware upload: {}", e.getMessage());
@@ -89,11 +99,13 @@ public class FirmwareController {
         logger.info("Received firmware download request for ID: {}", id);
         try {
             Firmware firmware = firmwareService.getFirmware(id);
+            Map<String, Object> response = new HashMap<>();
 
             if (firmware.getFirmwareLink() != null && !firmware.getFirmwareLink().isEmpty()) {
                 logger.info("Returning Google Drive link for firmware ID: {}", id);
-                Map<String, String> response = new HashMap<>();
-                response.put("firmwareLink", firmware.getFirmwareLink());
+                response.put("type", "link");
+                response.put("url", firmware.getFirmwareLink());
+                response.put("fileName", String.format("%s_%s_firmware.bin", firmware.getBrand(), firmware.getModel()));
                 return ResponseEntity.ok(response);
             }
 
@@ -104,11 +116,18 @@ public class FirmwareController {
 
             Resource resource = fileStorageService.loadFileAsResource(firmware.getFileName());
             String contentType = "application/octet-stream";
+            String contentDisposition = "attachment; filename=\"" + firmware.getFileName() + "\"";
+
+            response.put("type", "file");
+            response.put("url", String.format("/api/firmware/download/%d", id));
+            response.put("fileName", firmware.getFileName());
+            response.put("contentType", contentType);
+            response.put("contentDisposition", contentDisposition);
 
             logger.info("Serving firmware file: {} for ID: {}", firmware.getFileName(), id);
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType(contentType))
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + firmware.getFileName() + "\"")
+                    .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition)
                     .body(resource);
         } catch (Exception e) {
             logger.error("Error downloading firmware with ID: {}", id, e);
