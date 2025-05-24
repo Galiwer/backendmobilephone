@@ -105,7 +105,7 @@ public class FirmwareController {
                 logger.info("Returning Google Drive link for firmware ID: {}", id);
                 response.put("type", "link");
                 response.put("url", firmware.getFirmwareLink());
-                response.put("fileName", String.format("%s_%s_firmware.bin", firmware.getBrand(), firmware.getModel()));
+                response.put("fileName", String.format("%s_%s_firmware.zip", firmware.getBrand(), firmware.getModel()));
                 return ResponseEntity.ok(response);
             }
 
@@ -115,16 +115,11 @@ public class FirmwareController {
             }
 
             Resource resource = fileStorageService.loadFileAsResource(firmware.getFileName());
-            String contentType = "application/octet-stream";
-            String contentDisposition = "attachment; filename=\"" + firmware.getFileName() + "\"";
+            String fileName = String.format("%s_%s_firmware.zip", firmware.getBrand(), firmware.getModel());
+            String contentType = "application/zip";
+            String contentDisposition = "attachment; filename=\"" + fileName + "\"";
 
-            response.put("type", "file");
-            response.put("url", String.format("/api/firmware/download/%d", id));
-            response.put("fileName", firmware.getFileName());
-            response.put("contentType", contentType);
-            response.put("contentDisposition", contentDisposition);
-
-            logger.info("Serving firmware file: {} for ID: {}", firmware.getFileName(), id);
+            logger.info("Serving firmware file: {} for ID: {}", fileName, id);
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType(contentType))
                     .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition)
