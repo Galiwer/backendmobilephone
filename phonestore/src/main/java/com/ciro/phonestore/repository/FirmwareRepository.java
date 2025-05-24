@@ -19,9 +19,6 @@ public interface FirmwareRepository extends JpaRepository<Firmware, Long> {
     @Query("SELECT DISTINCT f.model FROM Firmware f WHERE f.brand = ?1 AND f.active = true")
     List<String> findDistinctModelsByBrandAndActiveTrue(String brand);
 
-    List<String> findDistinctBrand();
-
-    List<String> findDistinctModelByBrand(String brand);
-
+    @Query("SELECT f FROM Firmware f WHERE f.brand = ?1 AND f.model = ?2 ORDER BY f.id DESC")
     List<Firmware> findByBrandAndModelOrderByCreatedAtDesc(String brand, String model);
 }
