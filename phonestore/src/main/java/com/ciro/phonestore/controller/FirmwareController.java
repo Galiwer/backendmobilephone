@@ -171,6 +171,36 @@ public class FirmwareController {
         }
     }
 
+    @GetMapping("/admin/list")
+    public ResponseEntity<?> getAllFirmware() {
+        logger.info("Retrieving all firmware entries");
+        try {
+            List<Firmware> firmwareList = firmwareService.getAllFirmware();
+            logger.info("Successfully retrieved {} firmware entries", firmwareList.size());
+            return ResponseEntity.ok(firmwareList);
+        } catch (Exception e) {
+            logger.error("Error retrieving firmware list", e);
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Failed to retrieve firmware list: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    @GetMapping("/view/{id}")
+    public ResponseEntity<?> getFirmwareDetails(@PathVariable Long id) {
+        logger.info("Retrieving firmware details for ID: {}", id);
+        try {
+            Firmware firmware = firmwareService.getFirmware(id);
+            logger.info("Successfully retrieved firmware details for ID: {}", id);
+            return ResponseEntity.ok(firmware);
+        } catch (Exception e) {
+            logger.error("Error retrieving firmware details for ID: {}", id, e);
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Failed to retrieve firmware details: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
     private boolean isValidDriveLink(String link) {
         return link != null && (link.startsWith("https://drive.google.com/") ||
                 link.startsWith("https://docs.google.com/") ||
