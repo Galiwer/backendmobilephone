@@ -12,6 +12,10 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.nio.file.*;
+import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -19,11 +23,30 @@ public class FileStorageService {
     private static final Logger logger = LoggerFactory.getLogger(FileStorageService.class);
     private final Path fileStorageLocation;
 
-    public FileStorageService(@Value("${app.upload.dir:/tmp/firmware-uploads}") String uploadDir) {
+    public FileStorageService(@Value("${app.upload.dir:/var/lib/mysql/firmware-uploads}") String uploadDir) {
         this.fileStorageLocation = Paths.get(uploadDir).toAbsolutePath().normalize();
         try {
-            Files.createDirectories(this.fileStorageLocation);
-            logger.info("File storage location initialized at: {}", this.fileStorageLocation);
+            // Create directory with full permissions
+            Set<PosixFilePermission> permissions = PosixFilePermissions.fromString("rwxrwxrwx");
+            FileAttribute<Set<PosixFilePermission>> fileAttributes = PosixFilePermissions.asFileAttribute(permissions);
+
+            try {
+                Files.createDirectories(this.fileStorageLocation, fileAttributes);
+                logger.info("File storage location initialized at: {} with full permissions", this.fileStorageLocation);
+            } catch (UnsupportedOperationException e) {
+                // Fallback for non-POSIX systems
+                Files.createDirectories(this.fileStorageLocation);
+                logger.info("File storage location initialized at: {} without POSIX permissions",
+                        this.fileStorageLocation);
+            }
+
+            // Set permissions on existing directory if needed
+            try {
+                Files.setPosixFilePermissions(this.fileStorageLocation, permissions);
+                logger.info("Updated permissions on existing directory: {}", this.fileStorageLocation);
+            } catch (UnsupportedOperationException e) {
+                logger.warn("Could not set POSIX permissions on directory: {}", this.fileStorageLocation);
+            }
         } catch (IOException ex) {
             logger.error("Could not create directory at {}", this.fileStorageLocation, ex);
             throw new RuntimeException("Could not create the directory where the uploaded files will be stored.", ex);
@@ -53,6 +76,15 @@ public class FileStorageService {
 
             // Copy the file, replacing existing files of the same name
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+
+            // Set file permissions
+            try {
+                Set<PosixFilePermission> permissions = PosixFilePermissions.fromString("rw-rw-rw-");
+                Files.setPosixFilePermissions(targetLocation, permissions);
+                logger.info("Set permissions for file: {}", newFileName);
+            } catch (UnsupportedOperationException e) {
+                logger.warn("Could not set POSIX permissions on file: {}", newFileName);
+            }
 
             logger.info("Successfully stored file {} as {}", originalFileName, newFileName);
             return newFileName;
