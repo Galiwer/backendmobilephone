@@ -3,7 +3,9 @@ package com.ciro.phonestore.services;
 import com.ciro.phonestore.models.Firmware;
 import com.ciro.phonestore.models.FirmwareRequestDTO;
 import com.ciro.phonestore.models.FirmwareResponseDTO;
-
+import com.ciro.phonestore.repository.FirmwareRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +17,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class FirmwareService {
+    private static final Logger logger = LoggerFactory.getLogger(FirmwareService.class);
 
     private final FirmwareRepository firmwareRepository;
     private final FileStorageService fileStorageService;
@@ -49,36 +52,34 @@ public class FirmwareService {
 
     @Transactional
     public void deleteFirmware(Long id) {
-        Firmware firmware = firmwareRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Firmware not found"));
-
         try {
-            // Delete the file first
-            fileStorageService.deleteFile(firmware.getFirmwareLink());
-            // Then delete the database record
-            firmwareRepository.deleteById(id);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to delete firmware file", e);
+            Firmware firmware = getFirmware(id);
+            firmware.setActive(false);
+            firmwareRepository.save(firmware);
+            logger.info("Firmware soft deleted: {}", id);
+        } catch (Exception e) {
+            logger.error("Error deleting firmware", e);
+            throw new RuntimeException("Failed to delete firmware: " + e.getMessage());
         }
     }
 
     public List<FirmwareResponseDTO> getAllFirmware() {
-        List<Firmware> firmwares = firmwareRepository.findAll();
+        List<Firmware> firmwares = firmwareRepository.findByActiveTrue();
         return firmwares.stream()
                 .map(this::convertToResponseDTO)
                 .collect(Collectors.toList());
     }
 
     public List<String> getAllBrands() {
-        return firmwareRepository.findAllBrands();
+        return firmwareRepository.findDistinctBrandsByActiveTrue();
     }
 
     public List<String> getModelsByBrand(String brand) {
-        return firmwareRepository.findModelsByBrand(brand);
+        return firmwareRepository.findDistinctModelsByBrandAndActiveTrue(brand);
     }
 
     public List<FirmwareResponseDTO> getFirmwareByBrandAndModel(String brand, String model) {
-        List<Firmware> firmwares = firmwareRepository.findByBrandAndModel(brand, model);
+        List<Firmware> firmwares = firmwareRepository.findByBrandAndModelAndActiveTrue(brand, model);
         return firmwares.stream()
                 .map(this::convertToResponseDTO)
                 .collect(Collectors.toList());
@@ -95,5 +96,10 @@ public class FirmwareService {
         responseDTO.setReleaseDate("OS " + firmware.getUploadDate().getYear());
         responseDTO.setReleaseNotes(firmware.getReleaseNotes());
         return responseDTO;
+    }
+
+    public Firmware getFirmware(Long id) {
+        return firmwareRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Firmware not found with id: " + id));
     }
 }

@@ -1,32 +1,40 @@
 package com.ciro.phonestore.models;
 
 import jakarta.persistence.*;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "firmware")
 public class Firmware {
-
     @Id
-    @GeneratedValue(strategy = jakarta.persistence.GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private String brand;
+
+    @Column(nullable = false)
     private String model;
+
+    @Column(nullable = false)
     private String version;
-    private String firmwareLink;
-    private LocalDateTime uploadDate;
+
+    @Column(columnDefinition = "TEXT")
     private String releaseNotes;
 
-    public Firmware() {
-        this.uploadDate = LocalDateTime.now();
-    }
+    @Column
+    private String fileName;
 
+    @Column
+    private String firmwareLink;
+
+    @Column(nullable = false)
+    private LocalDateTime uploadDate = LocalDateTime.now();
+
+    @Column(nullable = false)
+    private boolean active = true;
+
+    // Getters and Setters
     public Long getId() {
         return id;
     }
@@ -59,6 +67,22 @@ public class Firmware {
         this.version = version;
     }
 
+    public String getReleaseNotes() {
+        return releaseNotes;
+    }
+
+    public void setReleaseNotes(String releaseNotes) {
+        this.releaseNotes = releaseNotes;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public void setFileName(String fileName) {
+        this.fileName = fileName;
+    }
+
     public String getFirmwareLink() {
         return firmwareLink;
     }
@@ -75,11 +99,11 @@ public class Firmware {
         this.uploadDate = uploadDate;
     }
 
-    public String getReleaseNotes() {
-        return releaseNotes;
+    public boolean isActive() {
+        return active;
     }
 
-    public void setReleaseNotes(String releaseNotes) {
-        this.releaseNotes = releaseNotes;
+    public void setActive(boolean active) {
+        this.active = active;
     }
 }
