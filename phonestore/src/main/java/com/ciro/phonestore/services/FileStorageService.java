@@ -11,81 +11,98 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
+import java.nio.file.*;
+import java.util.UUID;
 
 @Service
 public class FileStorageService {
     private static final Logger logger = LoggerFactory.getLogger(FileStorageService.class);
-
     private final Path fileStorageLocation;
 
-    public FileStorageService(@Value("${app.upload.dir:${user.home}/firmware-uploads}") String uploadDir) {
+    public FileStorageService(@Value("${app.upload.dir:/tmp/firmware-uploads}") String uploadDir) {
         this.fileStorageLocation = Paths.get(uploadDir).toAbsolutePath().normalize();
-
         try {
             Files.createDirectories(this.fileStorageLocation);
+            logger.info("File storage location initialized at: {}", this.fileStorageLocation);
         } catch (IOException ex) {
+            logger.error("Could not create directory at {}", this.fileStorageLocation, ex);
             throw new RuntimeException("Could not create the directory where the uploaded files will be stored.", ex);
         }
-
-        logger.info("File storage location set to: {}", this.fileStorageLocation);
     }
 
     public String storeFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            logger.error("Failed to store file. File is null or empty");
+            throw new RuntimeException("Failed to store empty file.");
+        }
+
         try {
-            if (file.isEmpty()) {
-                throw new RuntimeException("Failed to store empty file.");
+            // Generate unique filename
+            String originalFileName = StringUtils.cleanPath(file.getOriginalFilename());
+            String fileExtension = originalFileName.substring(originalFileName.lastIndexOf("."));
+            String newFileName = UUID.randomUUID().toString() + fileExtension;
+
+            // Validate file name
+            if (newFileName.contains("..")) {
+                logger.error("Invalid file name: {}", newFileName);
+                throw new RuntimeException("Invalid file name");
             }
 
-            // Normalize file name
-            String fileName = StringUtils.cleanPath(file.getOriginalFilename());
-
-            // Check if the file's name contains invalid characters
-            if (fileName.contains("..")) {
-                throw new RuntimeException("Sorry! Filename contains invalid path sequence " + fileName);
-            }
-
-            // Add timestamp to filename to prevent duplicates
-            String timestamp = String.valueOf(System.currentTimeMillis());
-            String fileExtension = fileName.substring(fileName.lastIndexOf("."));
-            String newFileName = fileName.substring(0, fileName.lastIndexOf(".")) + "_" + timestamp + fileExtension;
-
-            // Copy file to the target location
+            // Create the file path
             Path targetLocation = this.fileStorageLocation.resolve(newFileName);
+
+            // Copy the file, replacing existing files of the same name
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
-            logger.info("Stored file: {} as {}", fileName, newFileName);
+            logger.info("Successfully stored file {} as {}", originalFileName, newFileName);
             return newFileName;
         } catch (IOException ex) {
-            throw new RuntimeException("Could not store file. Please try again!", ex);
+            logger.error("Failed to store file {}", file.getOriginalFilename(), ex);
+            throw new RuntimeException("Failed to store file.", ex);
         }
     }
 
     public Resource loadFileAsResource(String fileName) {
         try {
+            if (fileName == null || fileName.isEmpty()) {
+                logger.error("Failed to load file. Filename is null or empty");
+                throw new RuntimeException("Filename cannot be empty.");
+            }
+
             Path filePath = this.fileStorageLocation.resolve(fileName).normalize();
             Resource resource = new UrlResource(filePath.toUri());
 
             if (resource.exists()) {
+                logger.info("File found: {}", fileName);
                 return resource;
             } else {
+                logger.error("File not found: {}", fileName);
                 throw new RuntimeException("File not found: " + fileName);
             }
         } catch (MalformedURLException ex) {
+            logger.error("File not found: {}", fileName, ex);
             throw new RuntimeException("File not found: " + fileName, ex);
         }
     }
 
     public void deleteFile(String fileName) {
         try {
+            if (fileName == null || fileName.isEmpty()) {
+                logger.error("Failed to delete file. Filename is null or empty");
+                return;
+            }
+
             Path filePath = this.fileStorageLocation.resolve(fileName).normalize();
-            Files.deleteIfExists(filePath);
-            logger.info("Deleted file: {}", fileName);
+            boolean deleted = Files.deleteIfExists(filePath);
+
+            if (deleted) {
+                logger.info("Successfully deleted file: {}", fileName);
+            } else {
+                logger.warn("File {} did not exist for deletion", fileName);
+            }
         } catch (IOException ex) {
-            throw new RuntimeException("Could not delete file: " + fileName, ex);
+            logger.error("Failed to delete file: {}", fileName, ex);
+            throw new RuntimeException("Failed to delete file: " + fileName, ex);
         }
     }
 }

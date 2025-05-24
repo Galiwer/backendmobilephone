@@ -37,8 +37,12 @@ public class FirmwareController {
             @RequestParam(value = "releaseNotes", required = false) String releaseNotes,
             @RequestParam(value = "firmwareFile", required = false) MultipartFile firmwareFile,
             @RequestParam(value = "firmwareLink", required = false) String firmwareLink) {
+
+        logger.info("Received firmware upload request for {}, {}, version {}", brand, model, version);
+
         try {
             if (firmwareFile == null && (firmwareLink == null || firmwareLink.isEmpty())) {
+                logger.error("Neither firmware file nor link provided");
                 throw new IllegalArgumentException("Either firmware file or Google Drive link must be provided");
             }
 
@@ -48,84 +52,129 @@ public class FirmwareController {
             firmware.setVersion(version);
             firmware.setReleaseNotes(releaseNotes);
 
-            if (firmwareFile != null) {
+            if (firmwareFile != null && !firmwareFile.isEmpty()) {
+                logger.debug("Processing firmware file upload");
                 String fileName = fileStorageService.storeFile(firmwareFile);
                 firmware.setFileName(fileName);
-            } else {
+                logger.info("Firmware file stored successfully: {}", fileName);
+            } else if (firmwareLink != null && !firmwareLink.isEmpty()) {
+                logger.debug("Processing firmware link");
+                if (!isValidDriveLink(firmwareLink)) {
+                    logger.error("Invalid Google Drive link provided: {}", firmwareLink);
+                    throw new IllegalArgumentException("Invalid Google Drive link format");
+                }
                 firmware.setFirmwareLink(firmwareLink);
+                logger.info("Firmware link stored successfully");
             }
 
             Firmware savedFirmware = firmwareService.saveFirmware(firmware);
+            logger.info("Firmware entry saved successfully with ID: {}", savedFirmware.getId());
             return ResponseEntity.ok(savedFirmware);
+
+        } catch (IllegalArgumentException e) {
+            logger.error("Validation error during firmware upload: {}", e.getMessage());
+            Map<String, String> response = new HashMap<>();
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
         } catch (Exception e) {
             logger.error("Error uploading firmware", e);
             Map<String, String> response = new HashMap<>();
-            response.put("message", e.getMessage());
+            response.put("message", "Failed to upload firmware: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 
     @GetMapping("/download/{id}")
     public ResponseEntity<?> downloadFirmware(@PathVariable Long id) {
+        logger.info("Received firmware download request for ID: {}", id);
         try {
             Firmware firmware = firmwareService.getFirmware(id);
 
-            // If firmware has a Google Drive link, return it
             if (firmware.getFirmwareLink() != null && !firmware.getFirmwareLink().isEmpty()) {
+                logger.info("Returning Google Drive link for firmware ID: {}", id);
                 Map<String, String> response = new HashMap<>();
                 response.put("firmwareLink", firmware.getFirmwareLink());
                 return ResponseEntity.ok(response);
             }
 
-            // Otherwise, serve the file
+            if (firmware.getFileName() == null || firmware.getFileName().isEmpty()) {
+                logger.error("No file or link found for firmware ID: {}", id);
+                throw new RuntimeException("No firmware file or link available");
+            }
+
             Resource resource = fileStorageService.loadFileAsResource(firmware.getFileName());
             String contentType = "application/octet-stream";
 
+            logger.info("Serving firmware file: {} for ID: {}", firmware.getFileName(), id);
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType(contentType))
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + firmware.getFileName() + "\"")
                     .body(resource);
         } catch (Exception e) {
-            logger.error("Error downloading firmware", e);
+            logger.error("Error downloading firmware with ID: {}", id, e);
             Map<String, String> response = new HashMap<>();
-            response.put("message", e.getMessage());
+            response.put("message", "Failed to download firmware: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 
-    @GetMapping("/admin/list")
-    public ResponseEntity<?> getAllFirmware() {
+    @GetMapping("/brands")
+    public ResponseEntity<?> getAllBrands() {
         try {
-            List<Firmware> firmwareList = firmwareService.getAllFirmware();
-            return ResponseEntity.ok(firmwareList);
+            List<String> brands = firmwareService.getAllBrands();
+            logger.info("Retrieved {} firmware brands", brands.size());
+            return ResponseEntity.ok(brands);
         } catch (Exception e) {
-            logger.error("Error getting firmware list", e);
+            logger.error("Error retrieving firmware brands", e);
             Map<String, String> response = new HashMap<>();
-            response.put("message", e.getMessage());
+            response.put("message", "Failed to retrieve brands: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    @GetMapping("/models/{brand}")
+    public ResponseEntity<?> getModelsByBrand(@PathVariable String brand) {
+        try {
+            List<String> models = firmwareService.getModelsByBrand(brand);
+            logger.info("Retrieved {} models for brand: {}", models.size(), brand);
+            return ResponseEntity.ok(models);
+        } catch (Exception e) {
+            logger.error("Error retrieving models for brand: {}", brand, e);
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Failed to retrieve models: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<?> deleteFirmware(@PathVariable Long id) {
+        logger.info("Received delete request for firmware ID: {}", id);
         try {
             Firmware firmware = firmwareService.getFirmware(id);
 
-            // Delete the file if it exists
-            if (firmware.getFileName() != null) {
+            if (firmware.getFileName() != null && !firmware.getFileName().isEmpty()) {
+                logger.debug("Deleting firmware file: {}", firmware.getFileName());
                 fileStorageService.deleteFile(firmware.getFileName());
             }
 
             firmwareService.deleteFirmware(id);
+            logger.info("Successfully deleted firmware with ID: {}", id);
 
             Map<String, String> response = new HashMap<>();
             response.put("message", "Firmware deleted successfully");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            logger.error("Error deleting firmware", e);
+            logger.error("Error deleting firmware with ID: {}", id, e);
             Map<String, String> response = new HashMap<>();
-            response.put("message", e.getMessage());
+            response.put("message", "Failed to delete firmware: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
+    }
+
+    private boolean isValidDriveLink(String link) {
+        return link != null && (link.startsWith("https://drive.google.com/") ||
+                link.startsWith("https://docs.google.com/") ||
+                link.startsWith("http://drive.google.com/") ||
+                link.startsWith("http://docs.google.com/"));
     }
 }
