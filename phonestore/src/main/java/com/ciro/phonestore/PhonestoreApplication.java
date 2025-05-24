@@ -19,28 +19,17 @@ public class PhonestoreApplication implements ApplicationListener<ContextRefresh
 	private Environment env;
 
 	public static void main(String[] args) {
-		try {
-			logger.info("Starting Phonestore Application...");
-			SpringApplication app = new SpringApplication(PhonestoreApplication.class);
-			Environment env = app.run(args).getEnvironment();
-			logger.info("Application started successfully");
-			logger.info("Running with profile: {}", env.getActiveProfiles()[0]);
-		} catch (Exception e) {
-			logger.error("Error starting application", e);
-			throw e;
-		}
+		SpringApplication.run(PhonestoreApplication.class, args);
 	}
 
 	@Override
 	public void onApplicationEvent(@NonNull ContextRefreshedEvent event) {
-		try {
-			logger.info("Application context refreshed");
-			logger.info("Active profile: {}", env.getActiveProfiles()[0]);
-			logger.info("Database URL: {}", env.getProperty("spring.datasource.url"));
-			logger.info("Server port: {}", env.getProperty("server.port"));
-		} catch (Exception e) {
-			logger.error("Error during context refresh", e);
-			throw e;
-		}
+		String[] profiles = env.getActiveProfiles();
+		String activeProfile = profiles.length > 0 ? profiles[0] : "default";
+
+		logger.info("Application context refreshed");
+		logger.info("Active profile: {}", activeProfile);
+		logger.info("Database URL: {}", env.getProperty("spring.datasource.url"));
+		logger.info("Server port: {}", env.getProperty("server.port"));
 	}
 }
