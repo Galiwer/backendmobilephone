@@ -7,12 +7,16 @@ import com.ciro.phonestore.models.JobStatus;
 import com.ciro.phonestore.repository.JobRepository;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -24,6 +28,7 @@ public class JobController {
     private JobRepository jobRepository;
 
     @GetMapping("/public/{jobNumber}")
+    @Cacheable(value = "jobs", key = "#jobNumber")
     public ResponseEntity<Job> getJobByNumberPublic(@PathVariable String jobNumber) {
         validateJobNumber(jobNumber);
         return jobRepository.findById(jobNumber)
@@ -33,6 +38,7 @@ public class JobController {
     }
 
     @GetMapping("/{jobNumber}")
+    @Cacheable(value = "jobs", key = "#jobNumber")
     public ResponseEntity<Job> getJobByNumber(@PathVariable String jobNumber) {
         validateJobNumber(jobNumber);
         return jobRepository.findById(jobNumber)
@@ -42,20 +48,28 @@ public class JobController {
     }
 
     @GetMapping
-    public ResponseEntity<Map<String, Object>> getAllJobs() {
-        List<Job> jobs = jobRepository.findAll();
+    public ResponseEntity<Map<String, Object>> getAllJobs(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "jobNumber") String sortBy) {
+
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(sortBy));
+        Page<Job> jobPage = jobRepository.findAll(pageRequest);
+
         return ResponseEntity.ok(Map.of(
                 "status", "success",
                 "message", "Jobs retrieved successfully",
-                "data", jobs,
-                "count", jobs.size()));
+                "data", jobPage.getContent(),
+                "currentPage", jobPage.getNumber(),
+                "totalItems", jobPage.getTotalElements(),
+                "totalPages", jobPage.getTotalPages()));
     }
 
     @PostMapping("/create")
+    @CacheEvict(value = "jobs", allEntries = true)
     public ResponseEntity<Map<String, Object>> createJob(@Valid @RequestBody Job job) {
         validateJobNumber(job.getJobNumber());
 
-        // Set default status to IN_QUEUE when a job is created
         job.setStatus(JobStatus.IN_QUEUE);
         job.setQueueDate(LocalDateTime.now());
 
@@ -68,6 +82,7 @@ public class JobController {
     }
 
     @PutMapping("/update/{jobNumber}")
+    @CacheEvict(value = "jobs", key = "#jobNumber")
     public ResponseEntity<Map<String, Object>> updateJobStatus(
             @PathVariable String jobNumber,
             @RequestBody Map<String, String> statusUpdate) {
@@ -98,6 +113,7 @@ public class JobController {
     }
 
     @DeleteMapping("/delete/{jobNumber}")
+    @CacheEvict(value = "jobs", allEntries = true)
     public ResponseEntity<Map<String, Object>> deleteJob(@PathVariable String jobNumber) {
         validateJobNumber(jobNumber);
 
