@@ -1,23 +1,14 @@
 package com.ciro.phonestore.controller;
 
-import com.ciro.phonestore.exceptions.JobNotFoundException;
-import com.ciro.phonestore.exceptions.InvalidJobNumberFormatException;
 import com.ciro.phonestore.models.Job;
 import com.ciro.phonestore.models.JobStatus;
 import com.ciro.phonestore.repository.JobRepository;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -29,76 +20,41 @@ public class JobController {
     private JobRepository jobRepository;
 
     @GetMapping("/public/{jobNumber}")
-    @Cacheable(value = "jobs", key = "#jobNumber")
     public ResponseEntity<Job> getJobByNumberPublic(@PathVariable String jobNumber) {
-        validateJobNumber(jobNumber);
-        return jobRepository.findById(jobNumber.toUpperCase())
-                .map(job -> ResponseEntity.ok()
-                        .body(job))
-                .orElseThrow(() -> new JobNotFoundException("Job not found with number: " + jobNumber));
+        return jobRepository.findById(jobNumber)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/{jobNumber}")
-    @PreAuthorize("hasRole('ADMIN')")
-    @Cacheable(value = "jobs", key = "#jobNumber")
     public ResponseEntity<Job> getJobByNumber(@PathVariable String jobNumber) {
-        validateJobNumber(jobNumber);
-        return jobRepository.findById(jobNumber.toUpperCase())
-                .map(job -> ResponseEntity.ok()
-                        .body(job))
-                .orElseThrow(() -> new JobNotFoundException("Job not found with number: " + jobNumber));
+        return jobRepository.findById(jobNumber)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Map<String, Object>> getAllJobs(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "jobNumber") String sortBy) {
-
-        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(sortBy));
-        Page<Job> jobPage = jobRepository.findAll(pageRequest);
-
-        return ResponseEntity.ok(Map.of(
-                "status", "success",
-                "message", "Jobs retrieved successfully",
-                "data", jobPage.getContent(),
-                "currentPage", jobPage.getNumber(),
-                "totalItems", jobPage.getTotalElements(),
-                "totalPages", jobPage.getTotalPages()));
+    public ResponseEntity<List<Job>> getAllJobs() {
+        return ResponseEntity.ok(jobRepository.findAll());
     }
 
     @PostMapping("/create")
-    @PreAuthorize("hasRole('ADMIN')")
-    @CacheEvict(value = "jobs", allEntries = true)
-    public ResponseEntity<Map<String, Object>> createJob(@Valid @RequestBody Job job) {
-        validateJobNumber(job.getJobNumber());
-
-        // Convert job number to uppercase for consistency
-        job.setJobNumber(job.getJobNumber().toUpperCase());
+    public ResponseEntity<Job> createJob(@RequestBody Job job) {
+        // Set default status to IN_QUEUE when a job is created
         job.setStatus(JobStatus.IN_QUEUE);
         job.setQueueDate(LocalDateTime.now());
 
         Job savedJob = jobRepository.save(job);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(Map.of(
-                        "status", "success",
-                        "message", "Job created successfully",
-                        "data", savedJob));
+        return ResponseEntity.ok(savedJob);
     }
 
     @PutMapping("/update/{jobNumber}")
-    @PreAuthorize("hasRole('ADMIN')")
-    @CacheEvict(value = "jobs", key = "#jobNumber")
-    public ResponseEntity<Map<String, Object>> updateJobStatus(
-            @PathVariable String jobNumber,
+    public ResponseEntity<?> updateJobStatus(@PathVariable String jobNumber,
             @RequestBody Map<String, String> statusUpdate) {
-        validateJobNumber(jobNumber);
-
-        Job job = jobRepository.findById(jobNumber.toUpperCase())
-                .orElseThrow(() -> new JobNotFoundException("Job not found with number: " + jobNumber));
-
         try {
+            Job job = jobRepository.findById(jobNumber)
+                    .orElseThrow(() -> new RuntimeException("Job not found: " + jobNumber));
+
             JobStatus newStatus = JobStatus.valueOf(statusUpdate.get("status"));
             job.setStatus(newStatus);
 
@@ -109,36 +65,22 @@ public class JobController {
             }
 
             Job updatedJob = jobRepository.save(job);
-            return ResponseEntity.ok(Map.of(
-                    "status", "success",
-                    "message", "Job status updated successfully",
-                    "data", updatedJob));
+            return ResponseEntity.ok(updatedJob);
         } catch (IllegalArgumentException e) {
-            throw new InvalidJobNumberFormatException(
-                    "Invalid status value. Allowed values are: IN_QUEUE, IN_PROGRESS, COMPLETED");
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error",
+                            "Invalid status value. Allowed values are: IN_QUEUE, IN_PROGRESS, COMPLETED"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
         }
     }
 
     @DeleteMapping("/delete/{jobNumber}")
-    @PreAuthorize("hasRole('ADMIN')")
-    @CacheEvict(value = "jobs", allEntries = true)
-    public ResponseEntity<Map<String, Object>> deleteJob(@PathVariable String jobNumber) {
-        validateJobNumber(jobNumber);
-
-        if (!jobRepository.existsById(jobNumber.toUpperCase())) {
-            throw new JobNotFoundException("Job not found with number: " + jobNumber);
+    public ResponseEntity<Map<String, String>> deleteJob(@PathVariable String jobNumber) {
+        if (!jobRepository.existsById(jobNumber)) {
+            return ResponseEntity.notFound().build();
         }
-
-        jobRepository.deleteById(jobNumber.toUpperCase());
-        return ResponseEntity.ok(Map.of(
-                "status", "success",
-                "message", "Job " + jobNumber + " deleted successfully"));
-    }
-
-    private void validateJobNumber(String jobNumber) {
-        if (jobNumber == null || !jobNumber.matches("^[Jj][0-9]+$")) {
-            throw new InvalidJobNumberFormatException(
-                    "Job number must start with 'J' or 'j' followed by numbers (e.g., J1, j1)");
-        }
+        jobRepository.deleteById(jobNumber);
+        return ResponseEntity.ok(Map.of("message", "Job " + jobNumber + " deleted successfully"));
     }
 }
