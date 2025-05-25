@@ -1,10 +1,14 @@
 package com.ciro.phonestore.models;
 
+import com.ciro.phonestore.exceptions.InvalidJobNumberException;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.regex.Pattern;
 
 @Entity
 public class Job {
+
+    private static final Pattern JOB_NUMBER_PATTERN = Pattern.compile("^J[1-3]$");
 
     @Id
     @Column(length = 100, name = "job_number")
@@ -30,6 +34,9 @@ public class Job {
     }
 
     public void setJobNumber(String jobNumber) {
+        if (jobNumber != null && !JOB_NUMBER_PATTERN.matcher(jobNumber).matches()) {
+            throw new InvalidJobNumberException(jobNumber);
+        }
         this.jobNumber = jobNumber;
     }
 
