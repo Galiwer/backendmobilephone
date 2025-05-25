@@ -1,4 +1,4 @@
-package com.ciro.phonestore.models;
+package com.ciro.phonestore.DTO;
 
 import java.time.LocalDateTime;
 

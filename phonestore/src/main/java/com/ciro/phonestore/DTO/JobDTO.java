@@ -1,5 +1,7 @@
-package com.ciro.phonestore.models;
+package com.ciro.phonestore.DTO;
 
+import com.ciro.phonestore.models.Job;
+import com.ciro.phonestore.models.JobStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;

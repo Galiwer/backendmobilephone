@@ -2,7 +2,7 @@ package com.ciro.phonestore.controller;
 
 import com.ciro.phonestore.exceptions.JobNotFoundException;
 import com.ciro.phonestore.models.Job;
-import com.ciro.phonestore.models.JobDTO;
+import com.ciro.phonestore.DTO.JobDTO;
 import com.ciro.phonestore.models.JobStatus;
 import com.ciro.phonestore.services.JobService;
 import jakarta.validation.Valid;

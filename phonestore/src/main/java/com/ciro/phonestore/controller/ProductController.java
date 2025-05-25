@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.ciro.phonestore.models.Product;
-import com.ciro.phonestore.models.ProductDto;
+import com.ciro.phonestore.DTO.ProductDTO;
 import com.ciro.phonestore.repository.ProductsRepository;
 
 @RestController
@@ -59,7 +59,7 @@ public class ProductController {
     }
 
     @PostMapping
-    public ResponseEntity<?> createProduct(@ModelAttribute ProductDto productDto) {
+    public ResponseEntity<?> createProduct(@ModelAttribute ProductDTO productDto) {
         logger.info("Received request to create product with data: name={}, brand={}, category={}",
                 productDto.getName(), productDto.getBrand(), productDto.getCategory());
 
@@ -124,7 +124,7 @@ public class ProductController {
     }
 
     @PutMapping("/update/{id}")
-    public ResponseEntity<?> updateProduct(@PathVariable int id, @ModelAttribute ProductDto productDto) {
+    public ResponseEntity<?> updateProduct(@PathVariable int id, @ModelAttribute ProductDTO productDto) {
         try {
             Optional<Product> productOpt = repo.findById(id);
             if (productOpt.isEmpty()) {

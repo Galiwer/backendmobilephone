@@ -1,10 +1,10 @@
-package com.ciro.phonestore.models;
+package com.ciro.phonestore.DTO;
 
 import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.constraints.*;
 
-public class ProductDto {
+public class ProductDTO {
     @NotEmpty(message = "The name is required")
     private String name;
 
