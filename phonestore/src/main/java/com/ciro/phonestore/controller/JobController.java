@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/jobs")
@@ -40,10 +41,18 @@ public class JobController {
     }
 
     @PutMapping("/update/{jobNumber}")
-    public ResponseEntity<Job> updateJobStatus(
+    public ResponseEntity<?> updateJobStatus(
             @PathVariable String jobNumber,
-            @RequestBody JobStatus status) {
-        return ResponseEntity.ok(jobService.updateJobStatus(jobNumber, status));
+            @RequestBody Map<String, String> statusUpdate) {
+        try {
+            JobStatus newStatus = JobStatus.valueOf(statusUpdate.get("status"));
+            Job updatedJob = jobService.updateJobStatus(jobNumber, newStatus);
+            return ResponseEntity.ok(updatedJob);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error",
+                            "Invalid status value. Allowed values are: IN_QUEUE, IN_PROGRESS, COMPLETED"));
+        }
     }
 
     @DeleteMapping("/delete/{jobNumber}")
