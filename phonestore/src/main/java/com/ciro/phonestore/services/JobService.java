@@ -60,13 +60,17 @@ public class JobService {
         logger.info("Attempting to delete job with number: {}", jobNumber);
 
         Job job = jobRepository.findById(jobNumber)
-                .orElseThrow(() -> new JobNotFoundException(jobNumber));
+                .orElseThrow(() -> {
+                    logger.warn("Job not found for deletion with number: {}", jobNumber);
+                    return new JobNotFoundException(jobNumber);
+                });
 
         try {
+            logger.info("Found job to delete: {}, current status: {}", jobNumber, job.getStatus());
             jobRepository.delete(job);
             logger.info("Successfully deleted job with number: {}", jobNumber);
         } catch (Exception e) {
-            logger.error("Error deleting job with number {}: {}", jobNumber, e.getMessage());
+            logger.error("Error deleting job with number {}: {}", jobNumber, e.getMessage(), e);
             throw new RuntimeException("Failed to delete job: " + e.getMessage());
         }
     }
