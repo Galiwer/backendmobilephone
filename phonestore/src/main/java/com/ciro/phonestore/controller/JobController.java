@@ -56,8 +56,22 @@ public class JobController {
     }
 
     @DeleteMapping("/delete/{jobNumber}")
-    public ResponseEntity<Void> deleteJob(@PathVariable String jobNumber) {
-        jobService.deleteJob(jobNumber);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<?> deleteJob(@PathVariable String jobNumber) {
+        try {
+            jobService.deleteJob(jobNumber);
+            return ResponseEntity.ok(Map.of("message", "Job " + jobNumber + " deleted successfully"));
+        } catch (JobNotFoundException e) {
+            return ResponseEntity.notFound()
+                    .build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Failed to delete job: " + e.getMessage()));
+        }
+    }
+
+    @ExceptionHandler(JobNotFoundException.class)
+    public ResponseEntity<?> handleJobNotFoundException(JobNotFoundException e) {
+        return ResponseEntity.notFound()
+                .build();
     }
 }

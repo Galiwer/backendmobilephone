@@ -4,14 +4,18 @@ import com.ciro.phonestore.exceptions.JobNotFoundException;
 import com.ciro.phonestore.models.Job;
 import com.ciro.phonestore.models.JobStatus;
 import com.ciro.phonestore.repository.JobRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
 public class JobService {
+    private static final Logger logger = LoggerFactory.getLogger(JobService.class);
 
     @Autowired
     private JobRepository jobRepository;
@@ -51,10 +55,19 @@ public class JobService {
         return jobRepository.save(job);
     }
 
+    @Transactional
     public void deleteJob(String jobNumber) {
-        if (!jobRepository.existsById(jobNumber)) {
-            throw new JobNotFoundException(jobNumber);
+        logger.info("Attempting to delete job with number: {}", jobNumber);
+
+        Job job = jobRepository.findById(jobNumber)
+                .orElseThrow(() -> new JobNotFoundException(jobNumber));
+
+        try {
+            jobRepository.delete(job);
+            logger.info("Successfully deleted job with number: {}", jobNumber);
+        } catch (Exception e) {
+            logger.error("Error deleting job with number {}: {}", jobNumber, e.getMessage());
+            throw new RuntimeException("Failed to delete job: " + e.getMessage());
         }
-        jobRepository.deleteById(jobNumber);
     }
 }
