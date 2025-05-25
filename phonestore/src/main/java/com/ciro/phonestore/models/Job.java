@@ -8,7 +8,7 @@ import java.util.regex.Pattern;
 @Entity
 public class Job {
 
-    private static final Pattern JOB_NUMBER_PATTERN = Pattern.compile("^J[1-3]$");
+    private static final Pattern JOB_NUMBER_PATTERN = Pattern.compile("^[Jj]\\d+$");
 
     @Id
     @Column(length = 100, name = "job_number")
