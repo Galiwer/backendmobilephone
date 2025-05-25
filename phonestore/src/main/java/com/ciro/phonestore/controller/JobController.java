@@ -14,6 +14,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -31,23 +32,25 @@ public class JobController {
     @Cacheable(value = "jobs", key = "#jobNumber")
     public ResponseEntity<Job> getJobByNumberPublic(@PathVariable String jobNumber) {
         validateJobNumber(jobNumber);
-        return jobRepository.findById(jobNumber)
+        return jobRepository.findById(jobNumber.toUpperCase())
                 .map(job -> ResponseEntity.ok()
                         .body(job))
                 .orElseThrow(() -> new JobNotFoundException("Job not found with number: " + jobNumber));
     }
 
     @GetMapping("/{jobNumber}")
+    @PreAuthorize("hasRole('ADMIN')")
     @Cacheable(value = "jobs", key = "#jobNumber")
     public ResponseEntity<Job> getJobByNumber(@PathVariable String jobNumber) {
         validateJobNumber(jobNumber);
-        return jobRepository.findById(jobNumber)
+        return jobRepository.findById(jobNumber.toUpperCase())
                 .map(job -> ResponseEntity.ok()
                         .body(job))
                 .orElseThrow(() -> new JobNotFoundException("Job not found with number: " + jobNumber));
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> getAllJobs(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -66,10 +69,13 @@ public class JobController {
     }
 
     @PostMapping("/create")
+    @PreAuthorize("hasRole('ADMIN')")
     @CacheEvict(value = "jobs", allEntries = true)
     public ResponseEntity<Map<String, Object>> createJob(@Valid @RequestBody Job job) {
         validateJobNumber(job.getJobNumber());
 
+        // Convert job number to uppercase for consistency
+        job.setJobNumber(job.getJobNumber().toUpperCase());
         job.setStatus(JobStatus.IN_QUEUE);
         job.setQueueDate(LocalDateTime.now());
 
@@ -82,13 +88,14 @@ public class JobController {
     }
 
     @PutMapping("/update/{jobNumber}")
+    @PreAuthorize("hasRole('ADMIN')")
     @CacheEvict(value = "jobs", key = "#jobNumber")
     public ResponseEntity<Map<String, Object>> updateJobStatus(
             @PathVariable String jobNumber,
             @RequestBody Map<String, String> statusUpdate) {
         validateJobNumber(jobNumber);
 
-        Job job = jobRepository.findById(jobNumber)
+        Job job = jobRepository.findById(jobNumber.toUpperCase())
                 .orElseThrow(() -> new JobNotFoundException("Job not found with number: " + jobNumber));
 
         try {
@@ -113,24 +120,25 @@ public class JobController {
     }
 
     @DeleteMapping("/delete/{jobNumber}")
+    @PreAuthorize("hasRole('ADMIN')")
     @CacheEvict(value = "jobs", allEntries = true)
     public ResponseEntity<Map<String, Object>> deleteJob(@PathVariable String jobNumber) {
         validateJobNumber(jobNumber);
 
-        if (!jobRepository.existsById(jobNumber)) {
+        if (!jobRepository.existsById(jobNumber.toUpperCase())) {
             throw new JobNotFoundException("Job not found with number: " + jobNumber);
         }
 
-        jobRepository.deleteById(jobNumber);
+        jobRepository.deleteById(jobNumber.toUpperCase());
         return ResponseEntity.ok(Map.of(
                 "status", "success",
                 "message", "Job " + jobNumber + " deleted successfully"));
     }
 
     private void validateJobNumber(String jobNumber) {
-        if (jobNumber == null || !jobNumber.matches("^J[1-9]\\d*$")) {
+        if (jobNumber == null || !jobNumber.matches("^[Jj][0-9]+$")) {
             throw new InvalidJobNumberFormatException(
-                    "Job number must be in format 'J' followed by a number (e.g., J1, J2, J3)");
+                    "Job number must start with 'J' or 'j' followed by numbers (e.g., J1, j1)");
         }
     }
 }

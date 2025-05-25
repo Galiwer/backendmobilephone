@@ -11,7 +11,7 @@ public class Job {
     @Id
     @Column(length = 100, name = "job_number")
     @NotBlank(message = "Job number cannot be blank")
-    @Pattern(regexp = "^J[1-9]\\d*$", message = "Job number must be in format 'J' followed by a number (e.g., J1, J2, J3)")
+    @Pattern(regexp = "^[Jj][0-9]+$", message = "Job number must start with 'J' or 'j' followed by numbers (e.g., J1, j1)")
     private String jobNumber;
 
     @Enumerated(EnumType.STRING)
