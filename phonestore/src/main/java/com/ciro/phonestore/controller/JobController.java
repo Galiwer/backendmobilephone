@@ -68,7 +68,7 @@ public class JobController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error",
-                            "Invalid status value. Allowed values are: IN_QUEUE, IN_PROGRESS, COMPLETED"));
+                            "Error: Invalid status value. Allowed values are: IN_QUEUE, IN_PROGRESS, COMPLETED"));
         }
     }
 
@@ -78,7 +78,7 @@ public class JobController {
             throw new JobNotFoundException(jobNumber);
         }
         jobRepository.deleteById(jobNumber);
-        return ResponseEntity.ok(Map.of("message", "Job " + jobNumber + " deleted successfully"));
+        return ResponseEntity.ok(Map.of("message", "Success: Job " + jobNumber + " deleted successfully"));
     }
 
     @ExceptionHandler(JobNotFoundException.class)
