@@ -81,15 +81,15 @@ public class UsersManagementService {
             logger.info("User found in database - Email: {}, Role: {}", user.getEmail(), user.getRole());
 
             try {
-                // Log the authentication attempt
+
                 logger.debug("Attempting to authenticate user with provided credentials");
 
-                // Create authentication token
+
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         loginRequest.getEmail(),
                         loginRequest.getPassword());
 
-                // Attempt authentication
+
                 var authentication = authenticationManager.authenticate(authToken);
 
                 logger.info("Authentication successful for user: {}", authentication.getName());
@@ -103,10 +103,10 @@ public class UsersManagementService {
                 return response;
             }
 
-            // If we get here, authentication was successful
+
             logger.info("Generating tokens for authenticated user: {}", user.getEmail());
 
-            // Generate tokens
+
             var jwt = jwtUtils.generateToken(user);
             var refreshToken = jwtUtils.generateRefreshToken(new HashMap<>(), user);
 
@@ -218,9 +218,9 @@ public class UsersManagementService {
                 existingUser.setCity(updatedUser.getCity());
                 existingUser.setRole(updatedUser.getRole());
 
-                // Check if password is present in the request
+
                 if (updatedUser.getPassword() != null && !updatedUser.getPassword().isEmpty()) {
-                    // Encode the password and update it
+
                     existingUser.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
                 }
 

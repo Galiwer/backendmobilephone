@@ -53,7 +53,7 @@ public class SecurityConfig {
                     .authorizeHttpRequests(request -> {
                         logger.debug("Configuring authorization rules...");
                         request
-                                // Public endpoints
+
                                 .requestMatchers(
                                         "/auth/**",
                                         "/public/**",
@@ -75,7 +75,7 @@ public class SecurityConfig {
                                         "/swagger-ui/**",
                                         "/swagger-ui.html")
                                 .permitAll()
-                                // Admin endpoints
+
                                 .requestMatchers(
                                         "/admin/**",
                                         "/api/products/update/**",
@@ -94,7 +94,7 @@ public class SecurityConfig {
                                         "/dashboard/**",
                                         "/api/admin/**")
                                 .hasAuthority("ADMIN")
-                                // User endpoints
+
                                 .requestMatchers(
                                         "/api/jobs/create",
                                         "/api/jobs/my/**",
@@ -103,7 +103,7 @@ public class SecurityConfig {
                                         "/api/user/**",
                                         "/adminuser/**")
                                 .hasAnyAuthority("USER", "ADMIN")
-                                // Everything else requires authentication
+
                                 .anyRequest()
                                 .authenticated();
                     })
@@ -123,7 +123,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList(
                 "https://mobilephoneshop.vercel.app",
-                "http://localhost:5173" // Development frontend URL
+                "http://localhost:5173"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"));
         configuration.setAllowedHeaders(Arrays.asList(

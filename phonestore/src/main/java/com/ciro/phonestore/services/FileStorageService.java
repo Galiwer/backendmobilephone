@@ -26,7 +26,7 @@ public class FileStorageService {
     public FileStorageService(@Value("${app.upload.dir:/var/lib/mysql/firmware-uploads}") String uploadDir) {
         this.fileStorageLocation = Paths.get(uploadDir).toAbsolutePath().normalize();
         try {
-            // Create directory with full permissions
+
             Set<PosixFilePermission> permissions = PosixFilePermissions.fromString("rwxrwxrwx");
             FileAttribute<Set<PosixFilePermission>> fileAttributes = PosixFilePermissions.asFileAttribute(permissions);
 
@@ -34,13 +34,13 @@ public class FileStorageService {
                 Files.createDirectories(this.fileStorageLocation, fileAttributes);
                 logger.info("File storage location initialized at: {} with full permissions", this.fileStorageLocation);
             } catch (UnsupportedOperationException e) {
-                // Fallback for non-POSIX systems
+
                 Files.createDirectories(this.fileStorageLocation);
                 logger.info("File storage location initialized at: {} without POSIX permissions",
                         this.fileStorageLocation);
             }
 
-            // Set permissions on existing directory if needed
+
             try {
                 Files.setPosixFilePermissions(this.fileStorageLocation, permissions);
                 logger.info("Updated permissions on existing directory: {}", this.fileStorageLocation);
@@ -60,24 +60,24 @@ public class FileStorageService {
         }
 
         try {
-            // Generate unique filename
+
             String originalFileName = StringUtils.cleanPath(file.getOriginalFilename());
             String fileExtension = originalFileName.substring(originalFileName.lastIndexOf("."));
             String newFileName = UUID.randomUUID().toString() + fileExtension;
 
-            // Validate file name
+
             if (newFileName.contains("..")) {
                 logger.error("Invalid file name: {}", newFileName);
                 throw new RuntimeException("Invalid file name");
             }
 
-            // Create the file path
+
             Path targetLocation = this.fileStorageLocation.resolve(newFileName);
 
-            // Copy the file, replacing existing files of the same name
+
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
-            // Set file permissions
+
             try {
                 Set<PosixFilePermission> permissions = PosixFilePermissions.fromString("rw-rw-rw-");
                 Files.setPosixFilePermissions(targetLocation, permissions);

@@ -100,7 +100,7 @@ public class FirmwareController {
         try {
             Firmware firmware = firmwareService.getFirmware(id);
 
-            // For Google Drive links
+
             if (firmware.getFirmwareLink() != null && !firmware.getFirmwareLink().isEmpty()) {
                 logger.info("Returning Google Drive link for firmware ID: {}", id);
                 Map<String, Object> response = new HashMap<>();
@@ -110,7 +110,7 @@ public class FirmwareController {
                 return ResponseEntity.ok(response);
             }
 
-            // For direct file downloads
+
             if (firmware.getFileName() == null || firmware.getFileName().isEmpty()) {
                 logger.error("No file or link found for firmware ID: {}", id);
                 throw new RuntimeException("No firmware file or link available");

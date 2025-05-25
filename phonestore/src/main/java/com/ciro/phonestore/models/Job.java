@@ -1,6 +1,8 @@
 package com.ciro.phonestore.models;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import java.time.LocalDateTime;
 
 @Entity
@@ -8,6 +10,8 @@ public class Job {
 
     @Id
     @Column(length = 100, name = "job_number")
+    @NotBlank(message = "Job number cannot be blank")
+    @Pattern(regexp = "^J[1-9]\\d*$", message = "Job number must be in format 'J' followed by a number (e.g., J1, J2, J3)")
     private String jobNumber;
 
     @Enumerated(EnumType.STRING)
@@ -21,11 +25,12 @@ public class Job {
 
     private LocalDateTime doneDate;
 
+    @NotBlank(message = "Device model cannot be blank")
     private String deviceModel;
 
+    @NotBlank(message = "Description cannot be blank")
     private String description;
 
-    // Getters and Setters
     public String getJobNumber() {
         return jobNumber;
     }

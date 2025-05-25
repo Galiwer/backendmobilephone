@@ -1,9 +1,13 @@
 package com.ciro.phonestore.controller;
 
+import com.ciro.phonestore.exceptions.JobNotFoundException;
+import com.ciro.phonestore.exceptions.InvalidJobNumberFormatException;
 import com.ciro.phonestore.models.Job;
 import com.ciro.phonestore.models.JobStatus;
-import com.ciro.phonestore.services.JobRepository;
+import com.ciro.phonestore.repository.JobRepository;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,47 +23,60 @@ public class JobController {
     @Autowired
     private JobRepository jobRepository;
 
-    // Public endpoint for job tracking
     @GetMapping("/public/{jobNumber}")
     public ResponseEntity<Job> getJobByNumberPublic(@PathVariable String jobNumber) {
+        validateJobNumber(jobNumber);
         return jobRepository.findById(jobNumber)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+                .map(job -> ResponseEntity.ok()
+                        .body(job))
+                .orElseThrow(() -> new JobNotFoundException("Job not found with number: " + jobNumber));
     }
 
-    // GET job by job number (admin only)
     @GetMapping("/{jobNumber}")
     public ResponseEntity<Job> getJobByNumber(@PathVariable String jobNumber) {
+        validateJobNumber(jobNumber);
         return jobRepository.findById(jobNumber)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+                .map(job -> ResponseEntity.ok()
+                        .body(job))
+                .orElseThrow(() -> new JobNotFoundException("Job not found with number: " + jobNumber));
     }
 
-    // GET all jobs (for admin view)
     @GetMapping
-    public ResponseEntity<List<Job>> getAllJobs() {
-        return ResponseEntity.ok(jobRepository.findAll());
+    public ResponseEntity<Map<String, Object>> getAllJobs() {
+        List<Job> jobs = jobRepository.findAll();
+        return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "message", "Jobs retrieved successfully",
+                "data", jobs,
+                "count", jobs.size()));
     }
 
-    // POST a new job
     @PostMapping("/create")
-    public ResponseEntity<Job> createJob(@RequestBody Job job) {
+    public ResponseEntity<Map<String, Object>> createJob(@Valid @RequestBody Job job) {
+        validateJobNumber(job.getJobNumber());
+
         // Set default status to IN_QUEUE when a job is created
         job.setStatus(JobStatus.IN_QUEUE);
         job.setQueueDate(LocalDateTime.now());
 
         Job savedJob = jobRepository.save(job);
-        return ResponseEntity.ok(savedJob);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(Map.of(
+                        "status", "success",
+                        "message", "Job created successfully",
+                        "data", savedJob));
     }
 
-    // PUT update job status
     @PutMapping("/update/{jobNumber}")
-    public ResponseEntity<?> updateJobStatus(@PathVariable String jobNumber,
+    public ResponseEntity<Map<String, Object>> updateJobStatus(
+            @PathVariable String jobNumber,
             @RequestBody Map<String, String> statusUpdate) {
-        try {
-            Job job = jobRepository.findById(jobNumber)
-                    .orElseThrow(() -> new RuntimeException("Job not found: " + jobNumber));
+        validateJobNumber(jobNumber);
 
+        Job job = jobRepository.findById(jobNumber)
+                .orElseThrow(() -> new JobNotFoundException("Job not found with number: " + jobNumber));
+
+        try {
             JobStatus newStatus = JobStatus.valueOf(statusUpdate.get("status"));
             job.setStatus(newStatus);
 
@@ -70,23 +87,34 @@ public class JobController {
             }
 
             Job updatedJob = jobRepository.save(job);
-            return ResponseEntity.ok(updatedJob);
+            return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "message", "Job status updated successfully",
+                    "data", updatedJob));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error",
-                            "Invalid status value. Allowed values are: IN_QUEUE, IN_PROGRESS, COMPLETED"));
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+            throw new InvalidJobNumberFormatException(
+                    "Invalid status value. Allowed values are: IN_QUEUE, IN_PROGRESS, COMPLETED");
         }
     }
 
-    // DELETE a job by job number
     @DeleteMapping("/delete/{jobNumber}")
-    public ResponseEntity<Map<String, String>> deleteJob(@PathVariable String jobNumber) {
+    public ResponseEntity<Map<String, Object>> deleteJob(@PathVariable String jobNumber) {
+        validateJobNumber(jobNumber);
+
         if (!jobRepository.existsById(jobNumber)) {
-            return ResponseEntity.notFound().build();
+            throw new JobNotFoundException("Job not found with number: " + jobNumber);
         }
+
         jobRepository.deleteById(jobNumber);
-        return ResponseEntity.ok(Map.of("message", "Job " + jobNumber + " deleted successfully"));
+        return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "message", "Job " + jobNumber + " deleted successfully"));
+    }
+
+    private void validateJobNumber(String jobNumber) {
+        if (jobNumber == null || !jobNumber.matches("^J[1-9]\\d*$")) {
+            throw new InvalidJobNumberFormatException(
+                    "Job number must be in format 'J' followed by a number (e.g., J1, J2, J3)");
+        }
     }
 }

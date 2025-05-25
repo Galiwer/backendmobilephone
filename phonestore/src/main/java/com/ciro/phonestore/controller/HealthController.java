@@ -25,11 +25,11 @@ public class HealthController {
         Map<String, Object> details = new HashMap<>();
 
         try {
-            // Check database connectivity
+
             jdbcTemplate.queryForObject("SELECT 1", Integer.class);
             details.put("database", "UP");
 
-            // Add memory information
+
             Runtime runtime = Runtime.getRuntime();
             Map<String, Object> memory = new HashMap<>();
             memory.put("total", runtime.totalMemory());

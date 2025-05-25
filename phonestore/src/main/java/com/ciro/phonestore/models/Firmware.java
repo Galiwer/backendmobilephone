@@ -34,7 +34,7 @@ public class Firmware {
     @Column(nullable = false)
     private boolean active = true;
 
-    // Getters and Setters
+
     public Long getId() {
         return id;
     }

@@ -40,7 +40,7 @@ public class JWTAuthFilter extends OncePerRequestFilter {
         try {
             String path = request.getRequestURI();
 
-            // Skip JWT check for public endpoints
+
             if (shouldNotFilter(request)) {
                 filterChain.doFilter(request, response);
                 return;
@@ -119,7 +119,7 @@ public class JWTAuthFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         logger.debug("Checking if should filter request to: {}", path);
 
-        // Don't filter public endpoints
+
         boolean shouldNotFilter = path.startsWith("/auth/") ||
                 path.startsWith("/public/") ||
                 path.startsWith("/api/products/list") ||
@@ -149,7 +149,7 @@ public class JWTAuthFilter extends OncePerRequestFilter {
     }
 
     private boolean isProtectedEndpoint(String path) {
-        // First check if it's a public endpoint
+
         if (path.startsWith("/auth/") ||
                 path.startsWith("/public/") ||
                 path.startsWith("/api/products/list") ||

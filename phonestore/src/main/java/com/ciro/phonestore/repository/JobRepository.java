@@ -1,4 +1,4 @@
-package com.ciro.phonestore.services;
+package com.ciro.phonestore.repository;
 
 import com.ciro.phonestore.models.Job;
 import org.springframework.data.jpa.repository.JpaRepository;

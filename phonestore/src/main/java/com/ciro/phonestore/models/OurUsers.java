@@ -21,7 +21,7 @@ public class OurUsers implements UserDetails {
     private String city;
     private String role;
 
-    // Getters and Setters
+
     public Integer getId() {
         return id;
     }

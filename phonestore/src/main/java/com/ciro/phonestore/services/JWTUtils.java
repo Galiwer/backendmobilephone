@@ -60,7 +60,7 @@ public class JWTUtils {
                     .setClaims(extraClaims)
                     .setSubject(userDetails.getUsername())
                     .setIssuedAt(new Date(System.currentTimeMillis()))
-                    .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24 * 7)) // 7 days
+                    .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24 * 7))
                     .signWith(getSignInKey(), SignatureAlgorithm.HS256)
                     .compact();
         } catch (Exception e) {
@@ -75,7 +75,7 @@ public class JWTUtils {
                     .setClaims(extraClaims)
                     .setSubject(userDetails.getUsername())
                     .setIssuedAt(new Date(System.currentTimeMillis()))
-                    .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24)) // 24 hours
+                    .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24))
                     .signWith(getSignInKey(), SignatureAlgorithm.HS256)
                     .compact();
         } catch (Exception e) {
