@@ -5,6 +5,7 @@ import com.ciro.phonestore.exceptions.InvalidJobNumberException;
 import com.ciro.phonestore.models.Job;
 import com.ciro.phonestore.models.JobStatus;
 import com.ciro.phonestore.repository.JobRepository;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -39,8 +40,7 @@ public class JobController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<Job> createJob(@RequestBody Job job) {
-        // Job number validation is handled by the Job entity
+    public ResponseEntity<Job> createJob(@Valid @RequestBody Job job) {
         job.setStatus(JobStatus.IN_QUEUE);
         job.setQueueDate(LocalDateTime.now());
         Job savedJob = jobRepository.save(job);
@@ -49,7 +49,7 @@ public class JobController {
 
     @PutMapping("/update/{jobNumber}")
     public ResponseEntity<?> updateJobStatus(@PathVariable String jobNumber,
-            @RequestBody Map<String, String> statusUpdate) {
+            @Valid @RequestBody Map<String, String> statusUpdate) {
         try {
             Job job = jobRepository.findById(jobNumber)
                     .orElseThrow(() -> new JobNotFoundException(jobNumber));

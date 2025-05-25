@@ -2,21 +2,28 @@ package com.ciro.phonestore.models;
 
 import com.ciro.phonestore.exceptions.InvalidJobNumberException;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
-import java.util.regex.Pattern;
 
 @Entity
 public class Job {
 
-    private static final Pattern JOB_NUMBER_PATTERN = Pattern.compile("^[Jj]\\d+$");
+    private static final java.util.regex.Pattern JOB_NUMBER_PATTERN = java.util.regex.Pattern.compile("^[Jj]\\d+$");
 
     @Id
     @Column(length = 100, name = "job_number")
+    @NotBlank(message = "Job number is required")
+    @Pattern(regexp = "^[Jj]\\d+$", message = "Job number must start with 'J' or 'j' followed by numbers")
     private String jobNumber;
 
+    @NotNull(message = "Job status is required")
     @Enumerated(EnumType.STRING)
     private JobStatus status;
 
+    @Column(nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
     private LocalDateTime queueDate;
@@ -25,8 +32,14 @@ public class Job {
 
     private LocalDateTime doneDate;
 
+    @NotBlank(message = "Device model is required")
+    @Size(min = 2, max = 100, message = "Device model must be between 2 and 100 characters")
+    @Column(nullable = false)
     private String deviceModel;
 
+    @NotBlank(message = "Description is required")
+    @Size(min = 10, max = 1000, message = "Description must be between 10 and 1000 characters")
+    @Column(nullable = false, length = 1000)
     private String description;
 
     public String getJobNumber() {
