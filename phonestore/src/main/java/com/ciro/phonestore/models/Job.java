@@ -32,16 +32,6 @@ public class Job {
 
     private LocalDateTime doneDate;
 
-    @NotBlank(message = "Device model is required")
-    @Size(min = 2, max = 100, message = "Device model must be between 2 and 100 characters")
-    @Column(nullable = false)
-    private String deviceModel;
-
-    @NotBlank(message = "Description is required")
-    @Size(min = 10, max = 1000, message = "Description must be between 10 and 1000 characters")
-    @Column(nullable = false, length = 1000)
-    private String description;
-
     public String getJobNumber() {
         return jobNumber;
     }
@@ -91,21 +81,5 @@ public class Job {
 
     public void setDoneDate(LocalDateTime doneDate) {
         this.doneDate = doneDate;
-    }
-
-    public String getDeviceModel() {
-        return deviceModel;
-    }
-
-    public void setDeviceModel(String deviceModel) {
-        this.deviceModel = deviceModel;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
     }
 }
