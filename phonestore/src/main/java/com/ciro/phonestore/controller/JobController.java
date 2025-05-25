@@ -2,6 +2,7 @@ package com.ciro.phonestore.controller;
 
 import com.ciro.phonestore.exceptions.JobNotFoundException;
 import com.ciro.phonestore.models.Job;
+import com.ciro.phonestore.models.JobDTO;
 import com.ciro.phonestore.models.JobStatus;
 import com.ciro.phonestore.services.JobService;
 import jakarta.validation.Valid;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/jobs")
@@ -26,23 +28,30 @@ public class JobController {
     private JobService jobService;
 
     @GetMapping("/public/{jobNumber}")
-    public ResponseEntity<Job> getJobByNumberPublic(@PathVariable String jobNumber) {
-        return ResponseEntity.ok(jobService.getJobByNumber(jobNumber));
+    public ResponseEntity<JobDTO> getJobByNumberPublic(@PathVariable String jobNumber) {
+        Job job = jobService.getJobByNumber(jobNumber);
+        return ResponseEntity.ok(new JobDTO(job));
     }
 
     @GetMapping("/{jobNumber}")
-    public ResponseEntity<Job> getJobByNumber(@PathVariable String jobNumber) {
-        return ResponseEntity.ok(jobService.getJobByNumber(jobNumber));
+    public ResponseEntity<JobDTO> getJobByNumber(@PathVariable String jobNumber) {
+        Job job = jobService.getJobByNumber(jobNumber);
+        return ResponseEntity.ok(new JobDTO(job));
     }
 
     @GetMapping
-    public ResponseEntity<List<Job>> getAllJobs() {
-        return ResponseEntity.ok(jobService.getAllJobs());
+    public ResponseEntity<List<JobDTO>> getAllJobs() {
+        List<JobDTO> jobDTOs = jobService.getAllJobs()
+                .stream()
+                .map(JobDTO::new)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(jobDTOs);
     }
 
     @PostMapping("/create")
-    public ResponseEntity<Job> createJob(@Valid @RequestBody Job job) {
-        return ResponseEntity.ok(jobService.createJob(job));
+    public ResponseEntity<JobDTO> createJob(@Valid @RequestBody JobDTO jobDTO) {
+        Job job = jobService.createJob(jobDTO.toEntity());
+        return ResponseEntity.ok(new JobDTO(job));
     }
 
     @PutMapping("/update/{jobNumber}")
@@ -52,7 +61,7 @@ public class JobController {
         try {
             JobStatus newStatus = JobStatus.valueOf(statusUpdate.get("status"));
             Job updatedJob = jobService.updateJobStatus(jobNumber, newStatus);
-            return ResponseEntity.ok(updatedJob);
+            return ResponseEntity.ok(new JobDTO(updatedJob));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error",
