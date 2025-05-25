@@ -1,6 +1,6 @@
 package com.ciro.phonestore.config;
 
-import com.ciro.phonestore.services.JWTUtils;
+import com.ciro.phonestore.services.JWTService;
 import com.ciro.phonestore.services.OurUserDetailsService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
@@ -29,78 +29,45 @@ public class JWTAuthFilter extends OncePerRequestFilter {
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
-    private JWTUtils jwtUtils;
+    private JWTService jwtService;
 
     @Autowired
-    private OurUserDetailsService ourUserDetailsService;
+    private OurUserDetailsService userDetailsService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        try {
-            String path = request.getRequestURI();
+        String authHeader = request.getHeader("Authorization");
 
-
-            if (shouldNotFilter(request)) {
-                filterChain.doFilter(request, response);
-                return;
-            }
-
-            final String authHeader = request.getHeader("Authorization");
-            logger.debug("Processing request to {}: {} with auth header: {}",
-                    request.getMethod(), path,
-                    authHeader != null ? "present" : "absent");
-
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                if (isProtectedEndpoint(path)) {
-                    logger.warn("Protected endpoint {} accessed without Bearer token", path);
-                    sendAuthenticationError(response, "Authentication required");
-                    return;
-                }
-                logger.debug("No Bearer token found in request to {}", path);
-                filterChain.doFilter(request, response);
-                return;
-            }
-
-            final String jwtToken = authHeader.substring(7);
-            final String userEmail = jwtUtils.extractUsername(jwtToken);
-
-            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                logger.debug("Found JWT token for user: {}", userEmail);
-
-                try {
-                    UserDetails userDetails = ourUserDetailsService.loadUserByUsername(userEmail);
-
-                    if (jwtUtils.isTokenValid(jwtToken, userDetails)) {
-                        logger.debug("JWT token is valid for user: {} with roles: {}",
-                                userEmail, userDetails.getAuthorities());
-
-                        SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
-                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                                userDetails, null, userDetails.getAuthorities());
-                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                        securityContext.setAuthentication(authToken);
-                        SecurityContextHolder.setContext(securityContext);
-
-                        logger.debug("Successfully authenticated user: {} with authorities: {}",
-                                userEmail, userDetails.getAuthorities());
-                    } else {
-                        logger.warn("Invalid JWT token for user: {}", userEmail);
-                        sendAuthenticationError(response, "Invalid JWT token");
-                        return;
-                    }
-                } catch (Exception e) {
-                    logger.error("Error loading user details: {}", e.getMessage());
-                    sendAuthenticationError(response, "Error loading user details");
-                    return;
-                }
-            }
-
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
-        } catch (Exception e) {
-            logger.error("Error processing JWT token: {}", e.getMessage(), e);
-            sendAuthenticationError(response, e.getMessage());
+            return;
         }
+
+        try {
+            String token = authHeader.substring(7);
+            String username = jwtService.extractUsername(token);
+
+            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+                if (jwtService.isTokenValid(token, userDetails)) {
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                            userDetails,
+                            null,
+                            userDetails.getAuthorities());
+
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+
+                    logger.debug("User authenticated: {} with roles: {}", username, userDetails.getAuthorities());
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Cannot set user authentication: {}", e.getMessage());
+        }
+
+        filterChain.doFilter(request, response);
     }
 
     private void sendAuthenticationError(HttpServletResponse response, String message) throws IOException {
@@ -118,7 +85,6 @@ public class JWTAuthFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
         String path = request.getRequestURI();
         logger.debug("Checking if should filter request to: {}", path);
-
 
         boolean shouldNotFilter = path.startsWith("/auth/") ||
                 path.startsWith("/public/") ||

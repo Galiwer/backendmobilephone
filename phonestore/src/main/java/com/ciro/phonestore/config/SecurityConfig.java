@@ -10,6 +10,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -23,17 +24,17 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.Arrays;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity
+@EnableMethodSecurity(securedEnabled = true, jsr250Enabled = true)
 public class SecurityConfig {
 
     private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
     @Autowired
     private OurUserDetailsService ourUserDetailsService;
+
     @Autowired
     private JWTAuthFilter jwtAuthFilter;
 
@@ -42,7 +43,7 @@ public class SecurityConfig {
         try {
             logger.info("Configuring security filter chain...");
 
-            httpSecurity
+            return httpSecurity
                     .csrf(AbstractHttpConfigurer::disable)
                     .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                     .exceptionHandling(exception -> exception
@@ -52,67 +53,23 @@ public class SecurityConfig {
                             }))
                     .sessionManagement(session -> session
                             .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                    .authorizeHttpRequests(request -> {
-                        logger.debug("Configuring authorization rules...");
-                        request
-                                .requestMatchers(
-                                        "/auth/**",
-                                        "/public/**",
-                                        "/api/products/list",
-                                        "/api/products/get/**",
-                                        "/api/jobs/status/**",
-                                        "/api/jobs/track/**",
-                                        "/api/jobs/public/**",
-                                        "/api/firmware/brands",
-                                        "/api/firmware/models/**",
-                                        "/api/firmware/view/**",
-                                        "/api/firmware/download/**",
-                                        "/api/firmware/admin/list",
-                                        "/images/**",
-                                        "/api/faqs/published",
-                                        "/error",
-                                        "/actuator/**",
-                                        "/v3/api-docs/**",
-                                        "/swagger-ui/**",
-                                        "/swagger-ui.html")
-                                .permitAll()
-
-                                .requestMatchers(
-                                        "/admin/**",
-                                        "/api/products/update/**",
-                                        "/api/products/delete/**",
-                                        "/api/jobs",
-                                        "/api/jobs/{id}",
-                                        "/api/jobs/create/**",
-                                        "/api/jobs/update/**",
-                                        "/api/jobs/delete/**",
-                                        "/api/jobs/manage/**",
-                                        "/api/firmware/upload",
-                                        "/api/firmware/delete/**",
-                                        "/api/firmware/update/**",
-                                        "/api/firmware/admin/**",
-                                        "/api/faqs/**",
-                                        "/dashboard/**",
-                                        "/api/admin/**")
-                                .hasAuthority("ADMIN")
-
-                                .requestMatchers(
-                                        "/api/jobs/create",
-                                        "/api/jobs/my/**",
-                                        "/api/jobs/user/**",
-                                        "/user/**",
-                                        "/api/user/**",
-                                        "/adminuser/**")
-                                .hasAnyAuthority("USER", "ADMIN")
-
-                                .anyRequest()
-                                .authenticated();
-                    })
+                    .authorizeHttpRequests(auth -> auth
+                            .requestMatchers("/auth/**",
+                                    "/api/jobs/public/**",
+                                    "/api/products/public/**",
+                                    "/api/products/list",
+                                    "/api/products/get/**",
+                                    "/images/**",
+                                    "/error")
+                            .permitAll()
+                            .requestMatchers("/api/jobs/**",
+                                    "/api/products/admin/**",
+                                    "/api/admin/**")
+                            .hasRole("ADMIN")
+                            .anyRequest().authenticated())
                     .authenticationProvider(authenticationProvider())
-                    .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
-
-            logger.info("Security filter chain configured successfully");
-            return httpSecurity.build();
+                    .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                    .build();
         } catch (Exception e) {
             logger.error("Error configuring security filter chain", e);
             throw e;
@@ -125,7 +82,7 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList(
                 "https://mobilephoneshop.vercel.app",
                 "http://localhost:5173"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList(
                 "Authorization",
                 "Content-Type",
@@ -134,14 +91,12 @@ public class SecurityConfig {
                 "Origin",
                 "Access-Control-Request-Method",
                 "Access-Control-Request-Headers"));
-        configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Disposition"));
+        configuration.setExposedHeaders(Arrays.asList("Authorization"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
-
-        logger.info("CORS configuration initialized with allowed origins: {}", configuration.getAllowedOrigins());
         return source;
     }
 

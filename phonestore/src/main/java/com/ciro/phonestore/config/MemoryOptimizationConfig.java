@@ -28,10 +28,10 @@ public class MemoryOptimizationConfig {
         return factory -> {
             factory.addConnectorCustomizers(connector -> {
                 connector.setMaxParameterCount(500);
-                connector.setMaxPostSize(1024 * 1024); // 1MB
+                connector.setMaxPostSize(1024 * 1024);
 
                 if (connector instanceof org.apache.catalina.connector.Connector) {
-                    ((org.apache.catalina.connector.Connector) connector).setMaxSavePostSize(1024 * 1024); // 1MB
+                    ((org.apache.catalina.connector.Connector) connector).setMaxSavePostSize(1024 * 1024);
                 }
             });
         };
