@@ -15,7 +15,7 @@ public class UserManagementController {
     @Autowired
     private UsersManagementService usersManagementService;
 
-    @PostMapping("/register")
+    @PostMapping("/auth/register")
     public ResponseEntity<ReqRes> register(@RequestBody ReqRes reg) {
         return ResponseEntity.ok(usersManagementService.register(reg));
     }
