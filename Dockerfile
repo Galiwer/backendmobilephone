@@ -1,4 +1,4 @@
-FROM maven:3.8.4-openjdk-17 as builder
+FROM maven:3.8.4-openjdk-17 AS builder
 
 WORKDIR /app
 COPY ./phonestore/pom.xml .
@@ -7,7 +7,9 @@ COPY ./phonestore/src ./src
 # Build with production profile
 RUN mvn clean package -DskipTests -Pprod
 
-FROM openjdk:17-jdk-slim
+
+# Runtime stage (FIXED)
+FROM eclipse-temurin:17-jre-jammy
 
 WORKDIR /app
 COPY --from=builder /app/target/*.jar app.jar
@@ -18,7 +20,7 @@ RUN mkdir -p /app/public/images
 # Set environment variable for Railway
 ENV RAILWAY_ENVIRONMENT=prod
 
-# Set JVM options for container environment with tight memory constraints
+# JVM options for low-memory container
 ENV JAVA_OPTS="\
     -XX:MaxRAMPercentage=80.0 \
     -XX:InitialRAMPercentage=50.0 \
@@ -40,4 +42,4 @@ ENV JAVA_OPTS="\
 
 EXPOSE 8080
 
-CMD java $JAVA_OPTS -jar -Dspring.profiles.active=prod app.jar 
+CMD java $JAVA_OPTS -jar -Dspring.profiles.active=prod app.jar
